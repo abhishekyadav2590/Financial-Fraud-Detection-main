@@ -24,28 +24,42 @@ def behavioral_risk_level(score):
 
 
 def _timestamp(row):
-    return datetime.fromisoformat(row["transaction_date"])
+    value = row.get("transaction_date")
+    return datetime.fromisoformat(value) if value else None
 
 
 def analyze_behavior(transactions):
     if not transactions:
         return []
 
-    ordered = sorted(transactions, key=_timestamp)
+    has_complete_calendar_dates = all(_timestamp(row) is not None for row in transactions)
+    ordered = (
+        sorted(transactions, key=_timestamp)
+        if has_complete_calendar_dates
+        else list(transactions)
+    )
     positive_amounts = [row["amount"] for row in ordered if row["amount"] > 0]
     typical_amount = median(positive_amounts) if positive_amounts else 0
-    hour_counts = Counter(row["transaction_hour"] for row in ordered)
+    hour_counts = Counter(
+        row["transaction_hour"] for row in ordered
+        if row.get("transaction_hour") is not None
+    )
     merchants = Counter(
         row["merchant_or_payee"].casefold()
         for row in ordered if row.get("merchant_or_payee")
+    )
+    merchant_categories = Counter(
+        row["merchant_category"].casefold()
+        for row in ordered if row.get("merchant_category")
     )
     transaction_types = Counter(
         row["transaction_type"].casefold()
         for row in ordered if row.get("transaction_type")
     )
     daily_spending = Counter()
-    for row in ordered:
-        daily_spending[row["date"]] += row["amount"]
+    if has_complete_calendar_dates:
+        for row in ordered:
+            daily_spending[row["date"]] += row["amount"]
     typical_daily_spending = median(daily_spending.values()) if daily_spending else 0
 
     analyzed = []
@@ -62,24 +76,32 @@ def analyze_behavior(transactions):
             score_components["amount"] = 0.65
             reasons.append(f"Transaction amount is {amount_ratio:.1f}x above your typical amount")
 
-        if len(ordered) >= 5 and hour_counts[row["transaction_hour"]] == 1:
+        transaction_hour = row.get("transaction_hour")
+        if (
+            transaction_hour is not None
+            and len(ordered) >= 5
+            and hour_counts[transaction_hour] == 1
+        ):
             score_components["time"] = 1.0
             reasons.append("Unusual transaction time compared with your statement activity")
 
-        previous_hour = [
-            prior for prior in ordered[:index]
-            if timestamp - timedelta(hours=1) <= _timestamp(prior) <= timestamp
-        ]
-        previous_day = [
-            prior for prior in ordered[:index]
-            if timestamp - timedelta(hours=24) <= _timestamp(prior) <= timestamp
-        ]
-        if len(previous_hour) >= 3:
-            score_components["frequency"] = 1.0
-            reasons.append(f"{len(previous_hour) + 1} transactions occurred within one hour")
-        elif len(previous_day) >= 7:
-            score_components["frequency"] = 0.7
-            reasons.append(f"{len(previous_day) + 1} transactions occurred within 24 hours")
+        previous_hour = []
+        previous_day = []
+        if has_complete_calendar_dates:
+            previous_hour = [
+                prior for prior in ordered[:index]
+                if timestamp - timedelta(hours=1) <= _timestamp(prior) <= timestamp
+            ]
+            previous_day = [
+                prior for prior in ordered[:index]
+                if timestamp - timedelta(hours=24) <= _timestamp(prior) <= timestamp
+            ]
+            if len(previous_hour) >= 3:
+                score_components["frequency"] = 1.0
+                reasons.append(f"{len(previous_hour) + 1} transactions occurred within one hour")
+            elif len(previous_day) >= 7:
+                score_components["frequency"] = 0.7
+                reasons.append(f"{len(previous_day) + 1} transactions occurred within 24 hours")
 
         merchant = row.get("merchant_or_payee")
         if merchant and merchants[merchant.casefold()] == 1 and len(merchants) >= 3:
@@ -88,22 +110,37 @@ def analyze_behavior(transactions):
         elif merchant and merchants[merchant.casefold()] == 2 and len(ordered) >= 8:
             score_components["merchant"] = 0.5
             reasons.append("New or rarely used merchant/payee")
+        else:
+            category = row.get("merchant_category")
+            if (
+                category
+                and merchant_categories[category.casefold()] == 1
+                and len(merchant_categories) >= 3
+            ):
+                score_components["merchant"] = 1.0
+                reasons.append("Uncommon merchant category in this statement")
 
         transaction_type = row.get("transaction_type")
         if transaction_type and transaction_types[transaction_type.casefold()] == 1 and len(ordered) >= 5:
             score_components["transaction_type"] = 1.0
             reasons.append("Rarely used transaction type or payment mode")
 
-        recent_spend = sum(prior["amount"] for prior in previous_day) + row["amount"]
-        spending_ratio = recent_spend / typical_daily_spending if typical_daily_spending else 1
-        if spending_ratio >= 3:
-            score_components["spending"] = 1.0
-            reasons.append(f"Recent 24-hour spend is {spending_ratio:.1f}x typical daily spend")
-        elif spending_ratio >= 2:
-            score_components["spending"] = 0.6
-            reasons.append(f"Recent 24-hour spend is {spending_ratio:.1f}x typical daily spend")
+        recent_spend = None
+        spending_ratio = None
+        if has_complete_calendar_dates:
+            recent_spend = sum(prior["amount"] for prior in previous_day) + row["amount"]
+            spending_ratio = (
+                recent_spend / typical_daily_spending
+                if typical_daily_spending else 1
+            )
+            if spending_ratio >= 3:
+                score_components["spending"] = 1.0
+                reasons.append(f"Recent 24-hour spend is {spending_ratio:.1f}x typical daily spend")
+            elif spending_ratio >= 2:
+                score_components["spending"] = 0.6
+                reasons.append(f"Recent 24-hour spend is {spending_ratio:.1f}x typical daily spend")
 
-        repeated = any(
+        repeated = has_complete_calendar_dates and any(
             prior.get("merchant_or_payee") == merchant
             and abs(prior["amount"] - row["amount"]) < 0.01
             and timestamp - timedelta(minutes=15) <= _timestamp(prior) <= timestamp
@@ -126,9 +163,17 @@ def analyze_behavior(transactions):
                 "risk_reasons": reasons,
                 "typical_amount": round(typical_amount, 2),
                 "amount_ratio": round(amount_ratio, 2),
-                "typical_daily_spending": round(typical_daily_spending, 2),
-                "recent_24h_spending": round(recent_spend, 2),
-                "spending_ratio": round(spending_ratio, 2),
+                "typical_daily_spending": (
+                    round(typical_daily_spending, 2)
+                    if has_complete_calendar_dates else None
+                ),
+                "recent_24h_spending": (
+                    round(recent_spend, 2) if recent_spend is not None else None
+                ),
+                "spending_ratio": (
+                    round(spending_ratio, 2) if spending_ratio is not None else None
+                ),
+                "calendar_date_available": has_complete_calendar_dates,
             }
         )
 

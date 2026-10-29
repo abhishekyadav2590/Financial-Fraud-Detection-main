@@ -65,15 +65,24 @@ def _risk_from_ratio(ratio: float | None, medium: float, high: float) -> int | N
 
 def _context_metrics(transaction: dict[str, Any], history: list[dict[str, Any]]):
     timestamp = _timestamp(transaction)
-    valid_timestamps = [(row, _timestamp(row)) for row in history]
-    valid_timestamps = [(row, value) for row, value in valid_timestamps if value is not None]
+    timestamped_history = [(row, _timestamp(row)) for row in history]
+    valid_timestamps = [
+        (row, value) for row, value in timestamped_history if value is not None
+    ]
 
+    hour = (
+        timestamp.hour if timestamp is not None
+        else transaction.get("transaction_hour")
+    )
     hour_count = None
     nearby_hour = []
     nearby_day = []
+    if hour is not None:
+        hour_count = sum(
+            (value.hour if value is not None else row.get("transaction_hour")) == hour
+            for row, value in timestamped_history
+        )
     if timestamp is not None:
-        hour = timestamp.hour
-        hour_count = sum(value.hour == hour for _, value in valid_timestamps)
         nearby_hour = [
             row for row, value in valid_timestamps
             if row is not transaction and abs((value - timestamp).total_seconds()) <= 3600
@@ -129,7 +138,7 @@ def _dimensions(transaction, metrics):
     }
     if metrics["hour_count"] is not None and history_count >= 5:
         dimensions["Time"] = 100 if metrics["hour_count"] == 1 else 10
-    if history_count >= 2:
+    if _timestamp(transaction) is not None and history_count >= 2:
         if metrics["repeated_payment"] or metrics["nearby_hour_count"] >= 3:
             dimensions["Frequency"] = 100
         elif metrics["nearby_day_count"] >= 7:
@@ -311,7 +320,17 @@ def create_investigation_pdf(transaction, investigation):
     ]
     details = [
         ["Amount", f"INR {float(transaction.get('amount', 0)):,.2f}"],
-        ["Date/time", str(transaction.get("transaction_date") or "Not available")],
+        [
+            "Date/time",
+            str(
+                transaction.get("transaction_date")
+                or (
+                    f"Hour {transaction['transaction_hour']} (calendar date not supplied)"
+                    if transaction.get("transaction_hour") is not None
+                    else "Not available"
+                )
+            ),
+        ],
         ["Merchant/payee", str(transaction.get("merchant_or_payee") or "Not available")],
         ["Final risk", str(transaction.get("final_risk_level") or "Not available")],
         ["Investigation score", f"{investigation['investigation_score']} / 100 ({investigation['severity']})"],

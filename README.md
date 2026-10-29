@@ -95,9 +95,9 @@ See [Research readiness](./docs/RESEARCH_READINESS.md) for the verified dataset/
 
 ## Smart Statement Analyzer
 
-Authenticated users can open `/statement-analyzer` and upload a Paytm-style or generic CSV/XLSX statement. Common column variants are detected automatically. The original upload is processed in memory and is never saved; detailed results remain in an owner-scoped temporary cache for approximately 30 minutes.
+Authenticated users can open `/statement-analyzer` and upload a Paytm-style or generic CSV/XLSX statement, including the project transaction-feature CSV format with `amount` and `transaction_hour`. Calendar-dated bank statements remain limited to 1,000 rows; hour-only files are limited to 20,000 rows and the existing 3 MB upload limit. Results are paginated. The original upload is processed in memory and is never saved; detailed results remain in an owner-scoped temporary cache for approximately 30 minutes.
 
-Statement rows receive an explainable behavioral anomaly score based on amount deviation, unusual activity time, frequency, merchant novelty, transaction-mode rarity, recent spending, and repeated-payment signals. The saved fraud model is not invoked when imported rows lack its required device, location, account-age, and merchant-category fields.
+Statement rows receive an explainable behavioral anomaly score based on available amount, time-of-day, transaction type, merchant/payee, and merchant-category data. Calendar-date-based trends, daily spending, and short-window frequency checks are omitted when dates are absent; no date is inferred from `transaction_hour`. The saved fraud model is not invoked for imported rows. A source `is_fraud` column is ignored and is not treated as a verified fraud finding.
 
 Medium- and high-risk rows include an **AI Investigate** action. The deterministic local investigator produces an investigation score, evidence and counter-evidence, risk-pattern explanation, explicit evidence coverage, behavior comparison, nearby transaction timeline, recommended human checks, radar chart, and downloadable PDF. No external AI service or API key is required, and the investigator never changes an administrator's review decision automatically.
 

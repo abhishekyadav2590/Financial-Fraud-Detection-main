@@ -20,6 +20,7 @@ from statement_analyzer.forms import StatementUploadForm
 
 LOGGER = logging.getLogger(__name__)
 RESULT_SORT_OPTIONS = {"risk", "amount", "date"}
+RESULTS_PER_PAGE = 50
 
 
 def _filter_results(analysis, suspicious_only, sort_by):
@@ -29,7 +30,10 @@ def _filter_results(analysis, suspicious_only, sort_by):
     if sort_by == "amount":
         rows.sort(key=lambda row: row["amount"], reverse=True)
     elif sort_by == "date":
-        rows.sort(key=lambda row: row["transaction_date"], reverse=True)
+        if analysis.get("calendar_dates_complete"):
+            rows.sort(key=lambda row: row["transaction_date"], reverse=True)
+        else:
+            rows.sort(key=lambda row: row["statement_row_number"])
     else:
         rows.sort(key=lambda row: (row["behavioral_score"], row["amount"]), reverse=True)
     return rows
@@ -86,9 +90,14 @@ def results(analysis_id):
     if invalid_filter:
         flash("An unsupported filter was ignored. Showing results with supported options.", "warning")
     rows = _filter_results(analysis, suspicious_only, sort_by)
+    page_count = max(1, (len(rows) + RESULTS_PER_PAGE - 1) // RESULTS_PER_PAGE)
+    page = request.args.get("page", 1, type=int) or 1
+    page = min(max(page, 1), page_count)
+    displayed_rows = rows[(page - 1) * RESULTS_PER_PAGE:page * RESULTS_PER_PAGE]
     return render_template(
         "statement/results.html", analysis=analysis, analysis_id=analysis_id,
-        displayed_results=rows, suspicious=suspicious_only, sort_by=sort_by,
+        displayed_results=displayed_rows, suspicious=suspicious_only, sort_by=sort_by,
+        page=page, page_count=page_count,
     )
 
 

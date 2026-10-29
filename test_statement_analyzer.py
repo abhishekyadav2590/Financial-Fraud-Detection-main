@@ -26,6 +26,15 @@ PAYTM_CSV = """Date & Time,Txn Amount,Payment Mode,Paid To,Status,Txn ID
 06/08/2026 02:10,5000,CARD,New Electronics,SUCCESS,P006
 """
 
+FRAUD_DATASET_CSV = """transaction_id,amount,transaction_type,transaction_hour,device_type,is_new_device,location_type,merchant_category,account_age_days,transactions_last_24h,average_transaction_amount,is_fraud
+F001,100,card_payment,10,mobile,0,usual,groceries,720,2,95,0
+F002,110,card_payment,10,mobile,0,usual,groceries,720,2,95,0
+F003,95,bank_transfer,11,desktop,0,usual,utilities,500,3,100,0
+F004,105,card_payment,10,mobile,0,usual,groceries,720,2,95,0
+F005,120,online_purchase,2,desktop,1,unusual_domestic,electronics,120,8,180,1
+F006,1000,online_purchase,2,desktop,1,international,electronics,120,8,180,1
+"""
+
 
 def create_test_app():
     return create_app(
@@ -89,6 +98,33 @@ def run_tests():
     assert any("time" in reason.lower() for reason in outlier["risk_reasons"])
     assert any("merchant" in reason.lower() for reason in outlier["risk_reasons"])
 
+    fraud_rows, fraud_mapping = parse_statement(FRAUD_DATASET_CSV.encode(), "fraud-dataset.csv")
+    assert len(fraud_rows) == 6
+    assert fraud_mapping["transaction_hour"] == "transaction_hour"
+    assert fraud_mapping["merchant_category"] == "merchant_category"
+    assert fraud_mapping["reference_id"] == "transaction_id"
+    assert all(row["transaction_date"] is None and row["date"] is None for row in fraud_rows)
+    assert fraud_rows[-1]["transaction_hour"] == 2
+    assert all("is_fraud" not in row for row in fraud_rows)
+
+    fraud_analysis_rows = analyze_behavior(fraud_rows)
+    assert all(row["typical_daily_spending"] is None for row in fraud_analysis_rows)
+    assert all(row["recent_24h_spending"] is None for row in fraud_analysis_rows)
+    assert all(row["spending_ratio"] is None for row in fraud_analysis_rows)
+    assert all(
+        not any("within one hour" in reason or "within 24 hours" in reason or "repeated payment" in reason
+                for reason in row["risk_reasons"])
+        for row in fraud_analysis_rows
+    )
+    fraud_summary = build_statement_analysis(fraud_analysis_rows, "fraud-dataset.csv")
+    assert not fraud_summary["calendar_dates_complete"]
+    assert fraud_summary["summary"]["transactions_with_calendar_dates"] == 0
+    assert fraud_summary["charts"]["spending"] == {"labels": [], "values": []}
+    assert fraud_summary["charts"]["timeline"] == {"labels": [], "values": []}
+    assert fraud_summary["charts"]["hours"]["values"][2] == 2
+    assert fraud_summary["charts"]["merchant_categories"]["labels"][0] == "groceries"
+    assert all("is_fraud" not in row for row in fraud_summary["results"])
+
     rapid_csv = """Date,Time,Amount,Merchant,Type
 01/08/2026,10:00,100,Shop,UPI
 01/08/2026,10:05,100,Shop,UPI
@@ -107,6 +143,36 @@ def run_tests():
         raise AssertionError("Missing required columns should fail")
     except StatementParseError as error:
         assert "required amount and transaction date" in str(error)
+
+    try:
+        parse_statement(
+            b"transaction_type,merchant_category\ncard_payment,groceries\n",
+            "no-amount.csv",
+        )
+        raise AssertionError("Statements without amount should fail")
+    except StatementParseError as error:
+        assert "required amount" in str(error)
+
+    try:
+        parse_statement(b"amount,transaction_type\n100,card_payment\n", "no-date-or-hour.csv")
+        raise AssertionError("Statements without date or transaction hour should fail")
+    except StatementParseError as error:
+        assert "transaction date or transaction hour" in str(error)
+
+    try:
+        parse_statement(b"amount,transaction_date\n100,not-a-date\n", "invalid-date.csv")
+        raise AssertionError("Rows without a valid date or hour should fail")
+    except StatementParseError as error:
+        assert "No rows contained a valid amount" in str(error)
+
+    try:
+        parse_statement(
+            b"amount,transaction_hour\n100,24\n200,not-an-hour\n",
+            "invalid-hours.csv",
+        )
+        raise AssertionError("Rows with invalid hours should fail when no date is available")
+    except StatementParseError as error:
+        assert "No rows contained a valid amount" in str(error)
 
     network = build_transaction_network(build_statement_analysis(analyzed, "paytm.csv"))
     assert network["available"]
@@ -153,6 +219,60 @@ def run_tests():
             missing = upload(client, b"name,value\nA,1\n", "missing.csv")
             assert missing.status_code == 200
             assert b"required amount and transaction date" in missing.data
+
+            no_date_response = upload(
+                client,
+                FRAUD_DATASET_CSV.encode(),
+                "fraud-dataset.csv",
+            )
+            assert no_date_response.status_code == 302
+            no_date_results_url = no_date_response.headers["Location"]
+            no_date_results = client.get(no_date_results_url)
+            assert no_date_results.status_code == 200
+            assert b"Calendar dates were not supplied" in no_date_results.data
+            assert b"No dates were inferred from transaction_hour" in no_date_results.data
+            assert b"statementSpendChart" not in no_date_results.data
+            assert b"is_fraud labels are not treated as verified findings" in no_date_results.data
+            assert b"Hour 2" in no_date_results.data
+            assert b"merchant_category" not in no_date_results.data
+            no_date_analysis_id = no_date_results_url.rsplit("/", 1)[-1]
+            no_date_detail = client.get(
+                f"/statement-analyzer/results/{no_date_analysis_id}/transaction/7"
+            )
+            assert no_date_detail.status_code == 200
+            assert b"calendar date not supplied" in no_date_detail.data
+            assert b"Unavailable without calendar dates" in no_date_detail.data
+            no_date_investigation = client.get(
+                f"/statement-analyzer/results/{no_date_analysis_id}/transaction/7/investigate"
+            )
+            assert no_date_investigation.status_code == 200
+            assert b"No nearby-transaction timeline is calculated" in no_date_investigation.data
+            no_date_report = client.get(
+                f"/statement-analyzer/results/{no_date_analysis_id}/download.csv"
+            )
+            assert no_date_report.status_code == 200
+            no_date_report_rows = list(
+                csv.DictReader(io.StringIO(no_date_report.data.decode("utf-8-sig")))
+            )
+            assert len(no_date_report_rows) == 6
+            assert all(not row["transaction_date"] for row in no_date_report_rows)
+            assert all(row["transaction_hour"] for row in no_date_report_rows)
+            assert all(row["included_transaction_date_start"] == "" for row in no_date_report_rows)
+            assert "is_fraud" not in no_date_report_rows[0]
+
+            actual_dataset = Path("dataset/transactions.csv").read_bytes()
+            dataset_response = upload(client, actual_dataset, "transactions.csv")
+            assert dataset_response.status_code == 302
+            dataset_results_url = dataset_response.headers["Location"]
+            dataset_results = client.get(dataset_results_url)
+            assert dataset_results.status_code == 200
+            assert b"Page 1 of 400" in dataset_results.data
+            assert dataset_results.data.count(b">Details</a>") == 50
+            assert b"Calendar dates were not supplied" in dataset_results.data
+            dataset_page_two = client.get(dataset_results_url + "?page=2")
+            assert dataset_page_two.status_code == 200
+            assert b"Page 2 of 400" in dataset_page_two.data
+            assert dataset_page_two.data.count(b">Details</a>") == 50
 
             csv_response = upload(client, PAYTM_CSV.encode(), "../../paytm.csv")
             assert csv_response.status_code == 302

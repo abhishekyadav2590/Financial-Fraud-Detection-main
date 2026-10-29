@@ -15,22 +15,32 @@ _cache_lock = threading.Lock()
 def build_statement_analysis(transactions, source_name):
     total = len(transactions)
     risk_counts = Counter(row["final_risk_level"] for row in transactions)
+    calendar_date_count = sum(bool(row.get("transaction_date")) for row in transactions)
+    calendar_dates_complete = calendar_date_count == total
     dated_spending = Counter()
     hour_counts = Counter()
     merchant_counts = Counter()
+    category_counts = Counter()
     timeline = []
     for row in transactions:
-        dated_spending[row["date"]] += row["amount"]
-        hour_counts[str(row["transaction_hour"])] += 1
+        if calendar_dates_complete:
+            dated_spending[row["date"]] += row["amount"]
+        if row.get("transaction_hour") is not None:
+            hour_counts[str(row["transaction_hour"])] += 1
         if row.get("merchant_or_payee"):
             merchant_counts[row["merchant_or_payee"]] += 1
-        timeline.append({"label": row["transaction_date"], "value": row["behavioral_score"]})
+        if row.get("merchant_category"):
+            category_counts[row["merchant_category"]] += 1
+        if calendar_dates_complete:
+            timeline.append({"label": row["transaction_date"], "value": row["behavioral_score"]})
 
     return {
         "source_name": source_name,
         "created_at": datetime.now(timezone.utc),
+        "calendar_dates_complete": calendar_dates_complete,
         "summary": {
             "total_transactions": total,
+            "transactions_with_calendar_dates": calendar_date_count,
             "low_risk": risk_counts["LOW"],
             "medium_risk": risk_counts["MEDIUM"],
             "high_risk": risk_counts["HIGH"],
@@ -46,6 +56,7 @@ def build_statement_analysis(transactions, source_name):
             "spending": {"labels": sorted(dated_spending), "values": [round(dated_spending[key], 2) for key in sorted(dated_spending)]},
             "hours": {"labels": [str(hour) for hour in range(24)], "values": [hour_counts[str(hour)] for hour in range(24)]},
             "merchants": {"labels": [name for name, _ in merchant_counts.most_common(8)], "values": [count for _, count in merchant_counts.most_common(8)]},
+            "merchant_categories": {"labels": [name for name, _ in category_counts.most_common(8)], "values": [count for _, count in category_counts.most_common(8)]},
             "timeline": {"labels": [item["label"] for item in sorted(timeline, key=lambda item: item["label"])], "values": [item["value"] for item in sorted(timeline, key=lambda item: item["label"])]},
         },
         "results": transactions,
@@ -121,7 +132,8 @@ def create_statement_csv(
     }
     columns = (
         *report_metadata,
-        "transaction_date", "amount", "merchant_or_payee", "transaction_type",
+        "transaction_date", "transaction_hour", "amount", "merchant_or_payee",
+        "merchant_category", "transaction_type",
         "behavioral_score", "ml_fraud_probability", "final_risk_level", "risk_reasons",
     )
     output = io.StringIO(newline="")

@@ -8,6 +8,7 @@ import pandas as pd
 
 MAX_STATEMENT_BYTES = 3 * 1024 * 1024
 MAX_STATEMENT_ROWS = 1_000
+MAX_HOUR_ONLY_ROWS = 20_000
 SUPPORTED_EXTENSIONS = {".csv", ".xlsx"}
 MAX_XLSX_UNCOMPRESSED_BYTES = 25 * 1024 * 1024
 
@@ -21,8 +22,10 @@ COLUMN_ALIASES = {
     "transaction_datetime": {"date time", "datetime", "transaction date time", "txn date time"},
     "transaction_date": {"date", "transaction date", "txn date", "payment date"},
     "transaction_time": {"time", "transaction time", "txn time", "payment time"},
+    "transaction_hour": {"transaction hour", "txn hour", "hour"},
     "transaction_type": {"type", "transaction type", "txn type", "mode", "payment mode"},
     "merchant_or_payee": {"merchant", "payee", "receiver", "beneficiary", "paid to"},
+    "merchant_category": {"merchant category", "category"},
     "description": {"description", "narration", "details", "remarks", "transaction details"},
     "debit_credit_type": {"debit credit", "debit credit type", "dr cr", "credit debit", "direction"},
     "transaction_status": {"status", "transaction status", "txn status", "payment status"},
@@ -79,6 +82,23 @@ def _parse_timestamp(row, mapping):
     return None if pd.isna(parsed) else parsed.to_pydatetime()
 
 
+def _parse_hour(row, mapping, timestamp=None):
+    if timestamp is not None:
+        return timestamp.hour
+    if "transaction_hour" not in mapping:
+        return None
+    raw_hour = row[mapping["transaction_hour"]]
+    if pd.isna(raw_hour):
+        return None
+    try:
+        hour = float(str(raw_hour).strip())
+    except (TypeError, ValueError):
+        return None
+    if not hour.is_integer() or not 0 <= hour <= 23:
+        return None
+    return int(hour)
+
+
 def parse_statement(file_bytes, filename):
     extension = Path(filename or "").suffix.lower()
     if extension not in SUPPORTED_EXTENSIONS:
@@ -107,40 +127,48 @@ def parse_statement(file_bytes, filename):
 
     if frame.empty:
         raise StatementParseError("The statement must contain at least one transaction row.")
-    if len(frame) > MAX_STATEMENT_ROWS:
-        raise StatementParseError(
-            f"The statement cannot contain more than {MAX_STATEMENT_ROWS} rows."
-        )
-
     mapping = detect_column_mapping(frame.columns)
-    if "amount" not in mapping or not ({"transaction_date", "transaction_datetime"} & mapping.keys()):
+    has_calendar_date = bool({"transaction_date", "transaction_datetime"} & mapping.keys())
+    has_hour = "transaction_hour" in mapping
+    if "amount" not in mapping or not (has_calendar_date or has_hour):
         raise StatementParseError(
-            "Could not identify the required amount and transaction date columns."
+            "Could not identify the required amount and transaction date or transaction hour columns."
+        )
+    row_limit = (
+        MAX_STATEMENT_ROWS
+        if has_calendar_date
+        else MAX_HOUR_ONLY_ROWS
+    )
+    if len(frame) > row_limit:
+        raise StatementParseError(
+            f"This statement format cannot contain more than {row_limit:,} rows."
         )
 
     transactions = []
     for position, (_, row) in enumerate(frame.iterrows(), start=2):
         amount = _parse_amount(row[mapping["amount"]])
         timestamp = _parse_timestamp(row, mapping)
-        if amount is None or timestamp is None:
+        transaction_hour = _parse_hour(row, mapping, timestamp)
+        if amount is None or (timestamp is None and transaction_hour is None):
             continue
         value = {
             "statement_row_number": position,
-            "transaction_date": timestamp.isoformat(),
-            "transaction_time": timestamp.strftime("%H:%M:%S"),
+            "transaction_date": timestamp.isoformat() if timestamp else None,
+            "transaction_time": timestamp.strftime("%H:%M:%S") if timestamp else None,
             "amount": abs(amount),
             "transaction_type": None,
             "merchant_or_payee": None,
+            "merchant_category": None,
             "description": None,
             "debit_credit_type": None,
             "transaction_status": None,
             "reference_id": None,
-            "transaction_hour": timestamp.hour,
-            "date": timestamp.date().isoformat(),
-            "time": timestamp.time().isoformat(),
+            "transaction_hour": transaction_hour,
+            "date": timestamp.date().isoformat() if timestamp else None,
+            "time": timestamp.time().isoformat() if timestamp else None,
         }
         for name in (
-            "transaction_type", "merchant_or_payee", "description",
+            "transaction_type", "merchant_or_payee", "merchant_category", "description",
             "debit_credit_type", "transaction_status", "reference_id",
         ):
             if name in mapping:
@@ -148,5 +176,7 @@ def parse_statement(file_bytes, filename):
         transactions.append(value)
 
     if not transactions:
-        raise StatementParseError("No rows contained both a valid amount and transaction date.")
+        raise StatementParseError(
+            "No rows contained a valid amount and a valid transaction date or transaction hour."
+        )
     return transactions, mapping
