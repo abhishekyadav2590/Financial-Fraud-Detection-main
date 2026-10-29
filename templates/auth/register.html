@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Register | FinShield AI{% endblock %}
+{% block content %}
+<div class="auth-shell"><div class="row g-4 align-items-stretch w-100 mx-0"><div class="col-lg-6 d-none d-lg-block"><div class="auth-visual h-100"><span class="brand-mark mb-4"><i class="bi bi-shield-check"></i></span><div class="page-eyebrow text-info">Explainable AI risk monitoring</div><h1 class="display-5 fw-bold mt-2">Build your personal transaction risk history.</h1><p class="lead text-white-50">Analyze transactions and statements while keeping human judgment at the center.</p><div class="mt-5 d-grid gap-3">{% for icon, text in [('bi-check-circle','Secure password hashing'),('bi-check-circle','Private, owner-scoped analysis'),('bi-check-circle','No public admin registration')] %}<div><i class="bi {{ icon }} text-info me-2"></i>{{ text }}</div>{% endfor %}</div></div></div>
+<div class="col-lg-6 d-flex align-items-center"><div class="auth-card card mx-auto"><div class="card-body p-4 p-xl-5">
+        <div class="feature-icon mb-3"><i class="bi bi-person-plus"></i></div><h1 class="h2 fw-bold mb-2">Create your account</h1><p class="text-muted mb-4">Start analyzing financial behavior with explainable risk intelligence.</p>
+        <form method="post" novalidate>
+            {{ form.hidden_tag() }}
+            {% for field in [form.full_name, form.email, form.password, form.confirm_password] %}
+                <div class="mb-3">
+                    {{ field.label(class="form-label") }}
+                    {{ field(class="form-control" + (" is-invalid" if field.errors else ""), autocomplete=('name' if field.name == 'full_name' else 'email' if field.name == 'email' else 'new-password')) }}
+                    {% for error in field.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+            {% endfor %}
+            <div class="form-text mb-3"><i class="bi bi-shield-lock me-1"></i>Passwords must contain at least 8 characters. Administrator access cannot be created here.</div>{{ form.submit(class="btn btn-primary w-100 py-2") }}
+        </form>
+        <p class="text-center text-muted mt-4 mb-0">Already have an account? <a class="fw-semibold" href="{{ url_for('auth.login') }}">Log in</a></p>
+    </div></div></div></div></div>
+{% endblock %}

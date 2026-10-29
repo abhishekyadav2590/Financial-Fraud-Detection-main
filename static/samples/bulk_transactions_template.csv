@@ -1,0 +1,4 @@
+amount,transaction_type,transaction_hour,device_type,is_new_device,location_type,merchant_category,account_age_days,transactions_last_24h,average_transaction_amount
+125.50,card_payment,14,mobile,0,usual,groceries,720,3,95.25
+950.00,online_purchase,2,desktop,1,international,electronics,120,8,180.00
+300.00,bank_transfer,10,mobile,0,unusual_domestic,utilities,1450,2,210.50

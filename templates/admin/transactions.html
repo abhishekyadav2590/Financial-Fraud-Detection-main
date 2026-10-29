@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Admin Transactions | FinShield AI{% endblock %}
+{% block content %}
+<div class="page-header"><div><div class="page-eyebrow">Review queue</div><h1 class="page-title">All transactions</h1><p class="page-subtitle">Filter system-wide predictions and open transactions for human review.</p></div></div>
+<form method="get" class="card card-body shadow-sm mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-4 col-xl">{{ form.risk_level.label(class="form-label") }}{{ form.risk_level(class="form-select") }}</div>
+        <div class="col-md-4 col-xl">{{ form.prediction_label.label(class="form-label") }}{{ form.prediction_label(class="form-select") }}</div>
+        <div class="col-md-4 col-xl">{{ form.transaction_type.label(class="form-label") }}{{ form.transaction_type(class="form-select") }}</div>
+        <div class="col-md-4 col-xl">{{ form.review_status.label(class="form-label") }}{{ form.review_status(class="form-select") }}</div>
+        <div class="col-md-5 col-xl-3">{{ form.reference.label(class="form-label") }}{{ form.reference(class="form-control") }}</div>
+        <div class="col-md-3 col-xl-auto">{{ form.submit(class="btn btn-primary") }}</div>
+    </div>
+</form>
+
+<div class="card shadow-sm"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+<thead class="table-light"><tr><th>Reference</th><th>User</th><th>Amount</th><th>Type</th><th>Prediction</th><th>Fraud probability</th><th>Risk</th><th>Review</th><th>Date</th><th></th></tr></thead>
+<tbody>{% for transaction in pagination.items %}{% set prediction = transaction.fraud_prediction %}{% set risk_class = {'LOW':'success','MEDIUM':'warning','HIGH':'danger'}[prediction.risk_level] %}
+<tr>
+    <td>{{ transaction.transaction_reference }}</td><td>{{ transaction.user.full_name }}<br><small class="text-muted">{{ transaction.user.email }}</small></td>
+    <td>{{ "{:,.2f}".format(transaction.amount) }}</td><td>{{ transaction.transaction_type|replace('_', ' ')|title }}</td><td>{{ prediction.prediction_label|title }}</td>
+    <td>{{ "{:.2f}".format(prediction.fraud_probability * 100) }}%</td><td><span class="badge text-bg-{{ risk_class }}">{{ prediction.risk_level }}</span></td>
+    <td><span class="badge text-bg-secondary">{{ prediction.review_status }}</span></td><td>{{ transaction.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+    <td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('admin.review_transaction', transaction_reference=transaction.transaction_reference) }}">View</a></td>
+</tr>{% else %}<tr><td colspan="10" class="text-center text-muted py-4">No transactions match the selected filters.</td></tr>{% endfor %}</tbody>
+</table></div></div>
+
+{% if pagination.pages > 1 %}<nav class="mt-4"><ul class="pagination justify-content-center">
+<li class="page-item {{ 'disabled' if not pagination.has_prev }}"><a class="page-link" href="{{ url_for('admin.transactions', page=pagination.prev_num, risk_level=form.risk_level.data, prediction_label=form.prediction_label.data, transaction_type=form.transaction_type.data, review_status=form.review_status.data, reference=form.reference.data) if pagination.has_prev else '#' }}">Previous</a></li>
+<li class="page-item disabled"><span class="page-link">Page {{ pagination.page }} of {{ pagination.pages }}</span></li>
+<li class="page-item {{ 'disabled' if not pagination.has_next }}"><a class="page-link" href="{{ url_for('admin.transactions', page=pagination.next_num, risk_level=form.risk_level.data, prediction_label=form.prediction_label.data, transaction_type=form.transaction_type.data, review_status=form.review_status.data, reference=form.reference.data) if pagination.has_next else '#' }}">Next</a></li>
+</ul></nav>{% endif %}
+{% endblock %}

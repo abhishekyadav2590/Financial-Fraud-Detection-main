@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Admin Users | FinShield AI{% endblock %}
+{% block content %}
+<div class="page-header"><div><div class="page-eyebrow">Access directory</div><h1 class="page-title">Users</h1><p class="page-subtitle">Account roles, status, registration dates, and transaction activity.</p></div></div>
+<div class="card shadow-sm"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+    <thead class="table-light"><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Registered</th><th>Transactions</th></tr></thead>
+    <tbody>{% for user, transaction_count in user_rows %}<tr>
+        <td>{{ user.full_name }}</td><td>{{ user.email }}</td><td>{{ user.role|title }}</td>
+        <td><span class="badge text-bg-{{ 'success' if user.is_active else 'secondary' }}">{{ 'Active' if user.is_active else 'Inactive' }}</span></td>
+        <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td><td>{{ transaction_count }}</td>
+    </tr>{% else %}<tr><td colspan="6" class="text-center text-muted py-4">No users found.</td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% endblock %}

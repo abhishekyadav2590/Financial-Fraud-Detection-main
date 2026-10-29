@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Statement Analyzer | FinShield AI{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="text-center mb-4"><div class="page-eyebrow">Behavioral intelligence</div>
+            <h1 class="page-title">Smart Statement Analyzer</h1>
+            <p class="page-subtitle mx-auto">Upload your Paytm or transaction statement to identify unusual behavior and rank potential risk.</p>
+        </div>
+        <div class="card">
+            <div class="card-body p-4">
+                <h2 class="section-title text-center">Upload Transaction Statement</h2>
+                <p class="text-muted text-center">Supported formats: CSV and Excel (.xlsx) · Up to 3 MB and 1,000 rows</p>
+                <form method="post" enctype="multipart/form-data" novalidate data-submit-once>
+                    {{ form.hidden_tag() }}
+                    <div class="upload-zone mb-3">
+                        <span class="upload-icon"><i class="bi bi-cloud-arrow-up"></i></span><h3 class="h5">Upload your Paytm or transaction statement</h3><p class="text-muted small">Drag a file here or choose one from your device</p>
+                        {{ form.statement_file.label(class="visually-hidden") }}
+                        {{ form.statement_file(class="form-control mx-auto" + (" is-invalid" if form.statement_file.errors else ""), accept=".csv,.xlsx") }}<div class="small text-muted mt-2" data-file-name>No file selected</div>
+                        {% for error in form.statement_file.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="d-grid d-sm-flex justify-content-center gap-2">{{ form.submit(class="btn btn-primary", data_loading_text="Analyzing statement...") }}<a class="btn btn-outline-primary" href="{{ url_for('static', filename='samples/statement_analyzer_sample.csv') }}" download><i class="bi bi-download me-1"></i>Sample statement</a></div>
+                </form>
+            </div>
+        </div>
+        <div class="alert alert-info mt-4 mb-4">
+            <strong>Privacy:</strong> Your uploaded statement is processed in memory for analysis and is not permanently stored. Detailed results expire after approximately 30 minutes.
+        </div><div class="row g-3 text-center">{% for number, icon, title, text in [('1','bi-cloud-arrow-up','Upload statement','Choose a CSV or XLSX export.'),('2','bi-cpu','Detect behavior','AI identifies deviations from your baseline.'),('3','bi-shield-check','Review risk','Inspect ranked transactions and evidence.')] %}<div class="col-md-4"><div class="card h-100"><div class="card-body"><span class="feature-icon mx-auto mb-2"><i class="bi {{ icon }}"></i></span><div class="data-label">Step {{ number }}</div><h3 class="h6 fw-bold mt-1">{{ title }}</h3><p class="small text-muted mb-0">{{ text }}</p></div></div></div>{% endfor %}</div>
+    </div>
+</div>
+{% endblock %}

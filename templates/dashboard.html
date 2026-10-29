@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% block title %}Fraud Analytics Overview | FinShield AI{% endblock %}
+{% block content %}
+<div class="dashboard-workspace" id="dashboardWorkspace">
+    <aside class="dashboard-sidebar" id="dashboardSidebar" aria-label="Workspace navigation">
+        <div class="dashboard-sidebar-heading">Workspace</div>
+        <nav class="dashboard-sidebar-nav">
+            <a class="dashboard-nav-link active" href="{{ url_for('dashboard') }}" aria-current="page">
+                <i class="bi bi-grid-1x2" aria-hidden="true"></i><span>Overview</span>
+            </a>
+            {% if current_user.role == 'admin' %}
+            <a class="dashboard-nav-link" href="{{ url_for('admin.transactions') }}">
+                <i class="bi bi-arrow-left-right" aria-hidden="true"></i><span>Transactions</span>
+            </a>
+            {% else %}
+            <a class="dashboard-nav-link" href="{{ url_for('transactions.transaction_history') }}">
+                <i class="bi bi-arrow-left-right" aria-hidden="true"></i><span>Transactions</span>
+            </a>
+            {% endif %}
+            <a class="dashboard-nav-link" href="{{ url_for('dashboard', prediction='fraud') }}">
+                <i class="bi bi-shield-exclamation" aria-hidden="true"></i><span>Fraud alerts</span>
+            </a>
+            {% if current_user.role == 'admin' %}
+            <a class="dashboard-nav-link" href="{{ url_for('admin.transactions', review_status='PENDING') }}">
+                <i class="bi bi-clipboard2-check" aria-hidden="true"></i><span>Investigations</span>
+            </a>
+            <a class="dashboard-nav-link" href="{{ url_for('admin.model_intelligence') }}">
+                <i class="bi bi-cpu" aria-hidden="true"></i><span>Model performance</span>
+            </a>
+            <a class="dashboard-nav-link" href="{{ url_for('admin.bulk_predict') }}">
+                <i class="bi bi-file-earmark-bar-graph" aria-hidden="true"></i><span>Reports</span>
+            </a>
+            <a class="dashboard-nav-link" href="{{ url_for('admin.users') }}">
+                <i class="bi bi-gear" aria-hidden="true"></i><span>Administration</span>
+            </a>
+            <a class="dashboard-nav-link" href="{{ url_for('admin.audit_log') }}">
+                <i class="bi bi-journal-check" aria-hidden="true"></i><span>Audit log</span>
+            </a>
+            {% else %}
+            <a class="dashboard-nav-link" href="{{ url_for('statement.upload') }}" title="Upload a statement to inspect transaction behavior">
+                <i class="bi bi-search" aria-hidden="true"></i><span>Investigations</span>
+            </a>
+            <a class="dashboard-nav-link" href="{{ url_for('statement.upload') }}" title="Statement analysis provides downloadable results">
+                <i class="bi bi-file-earmark-bar-graph" aria-hidden="true"></i><span>Reports</span>
+            </a>
+            {% endif %}
+            <a class="dashboard-nav-link" href="{{ url_for('assistant.home') }}">
+                <i class="bi bi-chat-square-text" aria-hidden="true"></i><span>Fraud Assistant</span>
+            </a>
+        </nav>
+        <div class="dashboard-sidebar-note">
+            <i class="bi bi-info-circle" aria-hidden="true"></i>
+            <span>Model assessments indicate risk; they do not confirm fraud.</span>
+        </div>
+    </aside>
+
+    <section class="dashboard-main" aria-label="Fraud analytics workspace">
+        <div class="dashboard-toolbar">
+            <button class="dashboard-sidebar-toggle" id="dashboardSidebarToggle" type="button"
+                    aria-controls="dashboardSidebar" aria-expanded="true" aria-label="Collapse workspace navigation">
+                <i class="bi bi-layout-sidebar-inset" aria-hidden="true"></i>
+            </button>
+            <nav aria-label="Breadcrumb">
+                <ol class="dashboard-breadcrumb">
+                    <li><a href="{{ url_for('dashboard') }}">Workspace</a></li>
+                    <li aria-current="page">Overview</li>
+                </ol>
+            </nav>
+            <a class="dashboard-toolbar-action" href="{{ url_for('transactions.new_transaction') }}">
+                <i class="bi bi-plus-lg" aria-hidden="true"></i><span>Analyze transaction</span>
+            </a>
+        </div>
+
+        <header class="dashboard-heading">
+            <div>
+                <p class="dashboard-eyebrow">Risk intelligence workspace</p>
+                <h1>Transaction overview</h1>
+                <p>Monitor your analyzed activity and review model-generated risk signals.</p>
+            </div>
+            <div class="dashboard-as-of"><i class="bi bi-lock" aria-hidden="true"></i> Private to your account</div>
+        </header>
+
+        <section class="dashboard-kpis" aria-label="Transaction analytics summary">
+            <article class="dashboard-kpi">
+                <div class="dashboard-kpi-label"><span>Transactions analyzed</span><i class="bi bi-arrow-left-right" aria-hidden="true"></i></div>
+                <div class="dashboard-kpi-value">{{ summary.total_transactions }}</div>
+                <p>Saved transaction assessments</p>
+            </article>
+            <article class="dashboard-kpi">
+                <div class="dashboard-kpi-label"><span>Model flagged</span><i class="bi bi-shield-exclamation" aria-hidden="true"></i></div>
+                <div class="dashboard-kpi-value">{{ summary.predicted_fraud }}</div>
+                <p>Predicted as fraud by the model</p>
+            </article>
+            <article class="dashboard-kpi">
+                <div class="dashboard-kpi-label"><span>High-risk predictions</span><i class="bi bi-exclamation-diamond" aria-hidden="true"></i></div>
+                <div class="dashboard-kpi-value">{{ summary.high_risk }}</div>
+                <p>Model risk level: high</p>
+            </article>
+            <article class="dashboard-kpi dashboard-kpi-accent">
+                <div class="dashboard-kpi-label"><span>Average fraud probability</span><i class="bi bi-speedometer2" aria-hidden="true"></i></div>
+                <div class="dashboard-kpi-value">{{ "{:.1f}".format(summary.average_fraud_probability * 100) }}<small>%</small></div>
+                <p>Across records matching these filters</p>
+            </article>
+        </section>
+
+        <p class="dashboard-integrity-note"><i class="bi bi-info-circle" aria-hidden="true"></i>
+            These values describe model predictions. The available review states do not identify confirmed fraud cases.
+        </p>
+        {% if filter_error %}
+        <p class="alert alert-warning" role="alert">{{ filter_error }}</p>
+        {% endif %}
+
+        <section class="dashboard-charts" aria-label="Transaction charts">
+            <article class="dashboard-panel dashboard-chart-panel">
+                <div class="dashboard-panel-heading"><div><p class="dashboard-panel-kicker">Model output</p><h2>Prediction distribution</h2></div><i class="bi bi-pie-chart" aria-hidden="true"></i></div>
+                <div class="dashboard-chart" data-chart="predictionChart"><canvas id="predictionChart" role="img" aria-label="Predicted genuine and predicted fraud transaction counts"></canvas><p class="dashboard-chart-state" role="status" hidden></p></div>
+            </article>
+            <article class="dashboard-panel dashboard-chart-panel">
+                <div class="dashboard-panel-heading"><div><p class="dashboard-panel-kicker">Model output</p><h2>Risk distribution</h2></div><i class="bi bi-bar-chart" aria-hidden="true"></i></div>
+                <div class="dashboard-chart" data-chart="riskChart"><canvas id="riskChart" role="img" aria-label="Transactions grouped by model risk level"></canvas><p class="dashboard-chart-state" role="status" hidden></p></div>
+            </article>
+            <article class="dashboard-panel dashboard-chart-panel">
+                <div class="dashboard-panel-heading"><div><p class="dashboard-panel-kicker">Activity mix</p><h2>Transaction types</h2></div><i class="bi bi-diagram-3" aria-hidden="true"></i></div>
+                <div class="dashboard-chart" data-chart="typeChart"><canvas id="typeChart" role="img" aria-label="Analyzed transactions by transaction type"></canvas><p class="dashboard-chart-state" role="status" hidden></p></div>
+            </article>
+            <article class="dashboard-panel dashboard-chart-panel">
+                <div class="dashboard-panel-heading"><div><p class="dashboard-panel-kicker">{{ trend_window }}</p><h2>Average modeled risk trend</h2></div><i class="bi bi-activity" aria-hidden="true"></i></div>
+                <div class="dashboard-chart" data-chart="trendChart"><canvas id="trendChart" role="img" aria-label="Daily average predicted fraud probability in the displayed transaction window"></canvas><p class="dashboard-chart-state" role="status" hidden></p></div>
+            </article>
+            <article class="dashboard-panel dashboard-chart-panel">
+                <div class="dashboard-panel-heading"><div><p class="dashboard-panel-kicker">Human review workflow</p><h2>Flagged review status</h2></div><i class="bi bi-clipboard2-check" aria-hidden="true"></i></div>
+                <div class="dashboard-chart" data-chart="reviewChart"><canvas id="reviewChart" role="img" aria-label="Model-flagged transactions by human review status"></canvas><p class="dashboard-chart-state" role="status" hidden></p></div>
+                <p class="dashboard-chart-caption">Review status is not a confirmed-fraud label.</p>
+            </article>
+        </section>
+
+        <section class="dashboard-panel dashboard-transactions" aria-labelledby="recentTransactionsTitle">
+            <div class="dashboard-transactions-heading">
+                <div><p class="dashboard-panel-kicker">Your records</p><h2 id="recentTransactionsTitle">Transactions</h2></div>
+                <span class="dashboard-record-count">{{ pagination.total }} result{% if pagination.total != 1 %}s{% endif %}</span>
+            </div>
+            <form class="dashboard-filters" method="get" action="{{ url_for('dashboard') }}" role="search" data-submit-once>
+                <div class="dashboard-search-field">
+                    <label class="visually-hidden" for="transactionSearch">Search by reference or type</label>
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <input class="form-control" id="transactionSearch" name="q" type="search" maxlength="64"
+                           value="{{ filters.search }}" placeholder="Search reference or transaction type">
+                </div>
+                <div>
+                    <label class="visually-hidden" for="riskFilter">Filter by model risk level</label>
+                    <select class="form-select" id="riskFilter" name="risk_level">
+                        <option value="">All risk levels</option>
+                        {% for risk in ('LOW', 'MEDIUM', 'HIGH') %}
+                        <option value="{{ risk }}" {{ 'selected' if filters.risk_level == risk }}>{{ risk|title }} risk</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="visually-hidden" for="predictionFilter">Filter by model prediction</label>
+                    <select class="form-select" id="predictionFilter" name="prediction">
+                        <option value="">All predictions</option>
+                        <option value="fraud" {{ 'selected' if filters.prediction_label == 'fraud' }}>Predicted fraud</option>
+                        <option value="genuine" {{ 'selected' if filters.prediction_label == 'genuine' }}>Predicted genuine</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="visually-hidden" for="transactionTypeFilter">Filter by transaction type</label>
+                    <select class="form-select" id="transactionTypeFilter" name="transaction_type">
+                        <option value="">All transaction types</option>
+                        {% for transaction_type in transaction_type_options %}
+                        <option value="{{ transaction_type }}" {{ 'selected' if filters.transaction_type == transaction_type }}>{{ transaction_type|replace('_', ' ')|title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="visually-hidden" for="dateFromFilter">Start date</label>
+                    <input class="form-control" id="dateFromFilter" name="date_from" type="date" value="{{ filters.date_from }}" aria-label="Start date">
+                </div>
+                <div>
+                    <label class="visually-hidden" for="dateToFilter">End date</label>
+                    <input class="form-control" id="dateToFilter" name="date_to" type="date" value="{{ filters.date_to }}" aria-label="End date">
+                </div>
+                <button class="btn btn-primary dashboard-filter-submit" type="submit" data-loading-text="Filtering..."><i class="bi bi-funnel me-1" aria-hidden="true"></i>Apply</button>
+                {% if filters.search or filters.risk_level or filters.prediction_label or filters.transaction_type or filters.date_from or filters.date_to %}
+                <a class="dashboard-clear-filters" href="{{ url_for('dashboard') }}">Clear filters</a>
+                {% endif %}
+            </form>
+
+            {% if pagination.items %}
+            <div class="table-responsive dashboard-table-wrap">
+                <table class="table align-middle mb-0 dashboard-table">
+                    <thead><tr><th scope="col">Reference</th><th scope="col">Date and time</th><th scope="col">Type</th><th scope="col">Amount</th><th scope="col">Model prediction</th><th scope="col">Probability</th><th scope="col">Risk</th><th scope="col" aria-label="Details"></th></tr></thead>
+                    <tbody>
+                    {% for transaction in recent_transactions %}
+                        {% set prediction = transaction.fraud_prediction %}
+                        <tr>
+                            <td><span class="dashboard-reference">{{ transaction.transaction_reference }}</span></td>
+                            <td><time datetime="{{ transaction.created_at.isoformat() }}">{{ transaction.created_at.strftime('%Y-%m-%d %H:%M') }}</time></td>
+                            <td>{{ transaction.transaction_type|replace('_', ' ')|title }}</td>
+                            <td>{{ "{:,.2f}".format(transaction.amount) }}</td>
+                            <td><span class="dashboard-prediction {{ 'is-fraud' if prediction.prediction_label == 'fraud' else 'is-genuine' }}">{{ prediction.prediction_label|title }}</span></td>
+                            <td>{{ "{:.1f}".format(prediction.fraud_probability * 100) }}%</td>
+                            <td><span class="risk-badge risk-{{ prediction.risk_level|lower }}">{{ prediction.risk_level|title }}</span></td>
+                            <td><a class="dashboard-view-link" href="{{ url_for('transactions.transaction_detail', transaction_reference=transaction.transaction_reference) }}" aria-label="View transaction {{ transaction.transaction_reference }}">View<i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% elif filters.search or filters.risk_level or filters.prediction_label or filters.transaction_type or filters.date_from or filters.date_to %}
+            <div class="dashboard-empty dashboard-empty-compact">
+                <i class="bi bi-search" aria-hidden="true"></i><h3>No matching transactions</h3>
+                <p>Try a different search term or clear one of the selected filters.</p>
+                <a href="{{ url_for('dashboard') }}">Clear filters</a>
+            </div>
+            {% else %}
+            <div class="dashboard-empty">
+                <i class="bi bi-inbox" aria-hidden="true"></i><h3>No transactions analyzed yet</h3>
+                <p>Analyze a transaction to populate this workspace with its saved model assessment.</p>
+                <a class="btn btn-primary" href="{{ url_for('transactions.new_transaction') }}">Analyze a transaction</a>
+            </div>
+            {% endif %}
+
+            {% if pagination.pages > 1 %}
+            <nav class="dashboard-pagination" aria-label="Transaction pages">
+                <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+                <div>
+                    {% if pagination.has_prev %}
+                    <a class="btn btn-outline-primary btn-sm" href="{{ url_for('dashboard', page=pagination.prev_num, q=filters.search, risk_level=filters.risk_level, prediction=filters.prediction_label, transaction_type=filters.transaction_type, date_from=filters.date_from, date_to=filters.date_to) }}"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Previous</a>
+                    {% endif %}
+                    {% if pagination.has_next %}
+                    <a class="btn btn-outline-primary btn-sm" href="{{ url_for('dashboard', page=pagination.next_num, q=filters.search, risk_level=filters.risk_level, prediction=filters.prediction_label, transaction_type=filters.transaction_type, date_from=filters.date_from, date_to=filters.date_to) }}">Next<i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
+                    {% endif %}
+                </div>
+            </nav>
+            {% endif %}
+        </section>
+    </section>
+</div>
+<script id="dashboard-chart-data" type="application/json">{{ chart_data|tojson }}</script>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

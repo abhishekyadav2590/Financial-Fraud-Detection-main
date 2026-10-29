@@ -1,0 +1,103 @@
+{
+  "model_version": "1.0",
+  "selected_model": "Logistic Regression",
+  "feature_names": [
+    "amount",
+    "transaction_type",
+    "transaction_hour",
+    "device_type",
+    "is_new_device",
+    "location_type",
+    "merchant_category",
+    "account_age_days",
+    "transactions_last_24h",
+    "average_transaction_amount"
+  ],
+  "numerical_features": [
+    "amount",
+    "transaction_hour",
+    "account_age_days",
+    "transactions_last_24h",
+    "average_transaction_amount"
+  ],
+  "engineered_features": [
+    "amount_ratio",
+    "unusual_hour",
+    "young_account",
+    "transaction_burst",
+    "new_device_unusual_location",
+    "amount_spike_unusual_hour",
+    "risky_context_burst"
+  ],
+  "categorical_features": [
+    "transaction_type",
+    "device_type",
+    "is_new_device",
+    "location_type",
+    "merchant_category"
+  ],
+  "target_column": "is_fraud",
+  "excluded_columns": [
+    "transaction_id"
+  ],
+  "training_row_count": 20000,
+  "fraud_percentage": 4.945,
+  "class_weight": null,
+  "prediction_threshold": 0.14844386194802967,
+  "risk_thresholds": {
+    "low_max": 0.1,
+    "medium_max": 0.3
+  },
+  "validation_metrics": {
+    "accuracy": 0.92675,
+    "precision": 0.28888888888888886,
+    "recall": 0.3282828282828283,
+    "f1_score": 0.3073286052009456,
+    "roc_auc": 0.7398857060877051,
+    "pr_auc": 0.23221572808421093,
+    "brier_score": 0.04252576390247521,
+    "false_positive_rate": 0.04208311415044713,
+    "false_negative_rate": 0.6717171717171717,
+    "confusion_matrix": [
+      [
+        3642,
+        160
+      ],
+      [
+        133,
+        65
+      ]
+    ],
+    "threshold": 0.14844386194802967
+  },
+  "held_out_test_metrics": {
+    "accuracy": 0.918,
+    "precision": 0.24206349206349206,
+    "recall": 0.30808080808080807,
+    "f1_score": 0.27111111111111114,
+    "roc_auc": 0.7254794127492707,
+    "pr_auc": 0.18802503916559513,
+    "brier_score": 0.04379514877001907,
+    "false_positive_rate": 0.05023671751709626,
+    "false_negative_rate": 0.6919191919191919,
+    "confusion_matrix": [
+      [
+        3611,
+        191
+      ],
+      [
+        137,
+        61
+      ]
+    ]
+  },
+  "random_state": 42,
+  "created_at_utc": "2026-08-17T12:03:17.350839+00:00",
+  "evaluation_methodology": {
+    "train_percentage": 60,
+    "validation_percentage": 20,
+    "test_percentage": 20,
+    "stratified": true,
+    "test_set_used_for_selection": false
+  }
+}

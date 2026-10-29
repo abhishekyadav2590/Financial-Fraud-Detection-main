@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Analyze Transaction | FinShield AI{% endblock %}
+{% macro render_field(field) %}
+<div class="col-md-6 mb-3">
+    {{ field.label(class="form-label") }}
+    {% if field.type == "SelectField" %}
+        {% if field.errors %}
+            {{ field(class="form-select is-invalid", aria_invalid="true", aria_describedby=field.id ~ "-errors", required=true) }}
+        {% else %}
+            {{ field(class="form-select", required=true) }}
+        {% endif %}
+    {% else %}
+        {% if field.errors %}
+            {{ field(class="form-control is-invalid", aria_invalid="true", aria_describedby=field.id ~ "-errors", required=true) }}
+        {% else %}
+            {{ field(class="form-control", required=true) }}
+        {% endif %}
+    {% endif %}
+    {% if field.errors %}
+        <div class="invalid-feedback d-block" id="{{ field.id }}-errors" role="alert">
+            {% for error in field.errors %}<div>{{ error }}</div>{% endfor %}
+        </div>
+    {% endif %}
+</div>
+{% endmacro %}
+{% block content %}
+<div class="page-header"><div><div class="page-eyebrow">Saved-model assessment</div><h1 class="page-title">Analyze a transaction</h1><p class="page-subtitle">Enter the transaction's observed details to receive a risk estimate from the deployed model.</p></div><div class="feature-icon"><i class="bi bi-search" aria-hidden="true"></i></div></div>
+<div class="card"><div class="card-body p-4 p-xl-5">
+        <form id="transactionAnalysisForm" method="post" novalidate data-submit-once aria-describedby="transactionFormGuidance">
+            {{ form.hidden_tag() }}
+            <p id="transactionFormGuidance" class="transaction-form-guidance">
+                Use observed values where possible. Model risk estimates support review and are not confirmed fraud findings.
+            </p>
+            <div class="row g-4">
+                <div class="col-xl-6"><section class="form-section h-100"><h2 class="form-section-title"><i class="bi bi-receipt text-primary"></i>Transaction Details</h2><div class="row">{{ render_field(form.amount) }}{{ render_field(form.transaction_type) }}{{ render_field(form.transaction_hour) }}{{ render_field(form.merchant_category) }}</div><p class="form-text mb-0">Use the transaction's actual amount and local hour (0–23).</p></section></div>
+                <div class="col-xl-6"><section class="form-section h-100"><h2 class="form-section-title"><i class="bi bi-phone text-primary"></i>Device & Location</h2><div class="row">{{ render_field(form.device_type) }}{{ render_field(form.is_new_device) }}{{ render_field(form.location_type) }}</div><p class="form-text mb-0">Device novelty and location context can influence model risk.</p></section></div>
+                <div class="col-12"><section class="form-section"><h2 class="form-section-title"><i class="bi bi-activity text-primary"></i>Behavior Context</h2><div class="row">{{ render_field(form.account_age_days) }}{{ render_field(form.transactions_last_24h) }}{{ render_field(form.average_transaction_amount) }}</div><p class="form-text mb-0">These fields help compare the transaction with recent account behavior.</p></section></div>
+            </div>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-4"><p class="text-muted small mb-0"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Predictions are not confirmed fraud decisions.</p>{{ form.submit(class="btn btn-primary btn-lg", value="Analyze Risk", data_loading_text="Analyzing risk...") }}</div>
+        </form>
+    </div></div>
+{% endblock %}

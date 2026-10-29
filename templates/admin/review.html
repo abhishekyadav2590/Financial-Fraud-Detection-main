@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Review Transaction | FinShield AI{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-end gap-2 mb-3"><a class="btn btn-outline-dark" href="{{ url_for('transactions.counterfactual_analysis', transaction_reference=transaction.transaction_reference) }}"><i class="bi bi-sliders me-2"></i>Counterfactual Analysis</a>{% if prediction.risk_level in ['MEDIUM', 'HIGH'] %}<a class="btn btn-investigate" href="{{ url_for('admin.investigate_transaction_route', transaction_reference=transaction.transaction_reference) }}"><i class="bi bi-shield-exclamation me-2"></i>AI Investigate</a>{% endif %}</div>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div><div class="page-eyebrow">Human decision workspace</div><h1 class="page-title">Suspicious transaction review</h1><span class="text-muted">{{ transaction.transaction_reference }}</span></div>
+    <a class="btn btn-outline-secondary" href="{{ url_for('admin.transactions') }}">Back to transactions</a>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-4"><div class="card shadow-sm h-100"><div class="card-body">
+        <h2 class="h5">User information</h2><dl class="mb-0 mt-3">
+            <dt>Name</dt><dd>{{ transaction.user.full_name }}</dd><dt>Email</dt><dd>{{ transaction.user.email }}</dd>
+        </dl>
+    </div></div></div>
+    <div class="col-lg-8"><div class="card shadow-sm h-100"><div class="card-body">
+        <h2 class="h5">Transaction information</h2><div class="row"><dl class="col-md-6 mb-0 mt-3">
+            <dt>Amount</dt><dd>{{ "{:,.2f}".format(transaction.amount) }}</dd>
+            <dt>Transaction type</dt><dd>{{ transaction.transaction_type|replace('_', ' ')|title }}</dd>
+            <dt>Hour</dt><dd>{{ transaction.transaction_hour }}</dd><dt>Device</dt><dd>{{ transaction.device_type|title }}</dd>
+            <dt>New device</dt><dd>{{ 'Yes' if transaction.is_new_device else 'No' }}</dd>
+        </dl><dl class="col-md-6 mb-0 mt-3">
+            <dt>Location</dt><dd>{{ transaction.location_type|replace('_', ' ')|title }}</dd>
+            <dt>Merchant category</dt><dd>{{ transaction.merchant_category|title }}</dd>
+            <dt>Account age</dt><dd>{{ transaction.account_age_days }} days</dd>
+            <dt>Transactions in last 24h</dt><dd>{{ transaction.transactions_last_24h }}</dd>
+            <dt>Average transaction amount</dt><dd>{{ "{:,.2f}".format(transaction.average_transaction_amount) }}</dd>
+        </dl></div>
+    </div></div></div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-6"><div class="card shadow-sm h-100"><div class="card-body">
+        <h2 class="h5">AI Prediction</h2><p class="text-muted small">The original model assessment is read-only.</p>
+        <dl class="row mb-0"><dt class="col-6">Predicted class</dt><dd class="col-6">{{ prediction.predicted_class }}</dd>
+        <dt class="col-6">Prediction label</dt><dd class="col-6">Predicted {{ prediction.prediction_label|title }}</dd>
+        <dt class="col-6">Fraud probability</dt><dd class="col-6">{{ "{:.2f}".format(prediction.fraud_probability * 100) }}%</dd>
+        <dt class="col-6">Genuine probability</dt><dd class="col-6">{{ "{:.2f}".format(prediction.genuine_probability * 100) }}%</dd>
+        <dt class="col-6">Risk level</dt><dd class="col-6">{{ prediction.risk_level }}</dd>
+        <dt class="col-6">Model</dt><dd class="col-6">{{ prediction.model_name }}</dd></dl>
+    </div></div></div>
+    <div class="col-lg-6"><div class="card shadow-sm h-100"><div class="card-body">
+        <h2 class="h5">Human Review</h2>
+        {% if prediction.reviewed_at %}<p class="small text-muted">Last reviewed by {{ prediction.reviewer.full_name if prediction.reviewer else 'Former administrator' }} at {{ prediction.reviewed_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC.</p>{% endif %}
+        <form method="post" novalidate>{{ form.hidden_tag() }}
+            <div class="mb-3">{{ form.review_status.label(class="form-label") }}{{ form.review_status(class="form-select" + (" is-invalid" if form.review_status.errors else "")) }}
+            {% for error in form.review_status.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}</div>
+            <div class="mb-3">{{ form.review_note.label(class="form-label") }}{{ form.review_note(class="form-control" + (" is-invalid" if form.review_note.errors else ""), rows=5) }}
+            {% for error in form.review_note.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}<div class="form-text">Maximum 1,000 characters.</div></div>
+            {{ form.submit(class="btn btn-primary") }}
+        </form>
+    </div></div></div>
+</div>
+{% endblock %}

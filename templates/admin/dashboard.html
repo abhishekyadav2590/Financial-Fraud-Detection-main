@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard | FinShield AI{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div><div class="page-eyebrow">Administrator workspace</div><h1 class="page-title">Fraud Operations Center</h1><p class="page-subtitle">System-wide AI risk monitoring and human review oversight.</p></div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-primary" href="{{ url_for('admin.transactions') }}"><i class="bi bi-list-check me-2"></i>View all transactions</a>
+        <a class="btn btn-outline-primary" href="{{ url_for('admin.audit_log') }}"><i class="bi bi-journal-check me-2"></i>Review audit log</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+{% set cards = [
+    ('Total Users', summary.total_users, ''),
+    ('Total Transactions', summary.total_transactions, ''),
+    ('Predicted Fraud', summary.predicted_fraud, 'text-danger'),
+    ('Predicted Genuine', summary.predicted_genuine, 'text-success'),
+    ('High-Risk Transactions', summary.high_risk, 'text-danger')
+] %}
+{% for label, value, color in cards %}
+<div class="col-sm-6 col-xl"><div class="card metric-card admin-accent h-100"><div class="card-body">
+    <span class="metric-label">{{ label }}</span><div class="metric-value {{ color }}">{{ value }}</div>
+</div></div></div>
+{% endfor %}
+<div class="col-sm-6 col-xl"><div class="card metric-card admin-accent h-100"><div class="card-body">
+    <span class="metric-label">Average Fraud Probability</span>
+    <div class="metric-value">{{ "{:.1f}".format(summary.average_fraud_probability * 100) }}%</div>
+</div></div></div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-6"><div class="card chart-card shadow-sm h-100"><div class="card-body"><h2 class="h5">Fraud vs Genuine</h2><canvas id="predictionChart"></canvas></div></div></div>
+    <div class="col-lg-6"><div class="card chart-card shadow-sm h-100"><div class="card-body"><h2 class="h5">Risk Distribution</h2><canvas id="riskChart"></canvas></div></div></div>
+    <div class="col-lg-6"><div class="card chart-card shadow-sm h-100"><div class="card-body"><h2 class="h5">Transaction Types</h2><canvas id="typeChart"></canvas></div></div></div>
+    <div class="col-lg-6"><div class="card chart-card shadow-sm h-100"><div class="card-body"><h2 class="h5">Recent Average Fraud Risk</h2><canvas id="trendChart"></canvas></div></div></div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white py-3"><h2 class="h5 mb-0">Recent high-risk transactions</h2></div>
+    {% if recent_high_risk_transactions %}
+    <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+        <thead class="table-light"><tr><th>Reference</th><th>User</th><th>Amount</th><th>Type</th><th>Fraud probability</th><th>Prediction</th><th>Date</th><th>Review</th><th></th></tr></thead>
+        <tbody>{% for transaction in recent_high_risk_transactions %}{% set prediction = transaction.fraud_prediction %}
+        <tr>
+            <td>{{ transaction.transaction_reference }}</td><td>{{ transaction.user.full_name }}<br><small class="text-muted">{{ transaction.user.email }}</small></td>
+            <td>{{ "{:,.2f}".format(transaction.amount) }}</td><td>{{ transaction.transaction_type|replace('_', ' ')|title }}</td>
+            <td>{{ "{:.2f}".format(prediction.fraud_probability * 100) }}%</td><td>{{ prediction.prediction_label|title }}</td>
+            <td>{{ transaction.created_at.strftime('%Y-%m-%d %H:%M') }}</td><td><span class="badge text-bg-secondary">{{ prediction.review_status }}</span></td>
+            <td><a class="btn btn-sm btn-primary" href="{{ url_for('admin.review_transaction', transaction_reference=transaction.transaction_reference) }}"><i class="bi bi-person-check me-1"></i>Review</a></td>
+        </tr>{% endfor %}</tbody>
+    </table></div>
+    {% else %}<div class="card-body text-center text-muted">No high-risk transactions.</div>{% endif %}
+</div>
+<script id="dashboard-chart-data" type="application/json">{{ chart_data|tojson }}</script>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

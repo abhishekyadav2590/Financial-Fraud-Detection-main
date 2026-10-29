@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Transaction Intelligence Network | FinShield AI{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><div class="page-eyebrow">Relationship intelligence</div><h1 class="page-title">Transaction Intelligence Network</h1><p class="page-subtitle">Aggregated from the normalized transactions in {{ analysis.source_name }}. Patterns indicate behavioral risk for review, not confirmed fraud.</p></div>
+  <div class="d-flex gap-2"><a class="btn btn-outline-primary" href="{{ url_for('statement.results', analysis_id=analysis_id) }}"><i class="bi bi-arrow-left me-1"></i>Statement Results</a><button class="btn btn-primary" id="fit-network" type="button"><i class="bi bi-arrows-fullscreen me-1"></i>Fit View</button></div>
+</div>
+
+{% if not network.available %}
+<div class="card"><div class="empty-state"><div class="empty-state-icon"><i class="bi bi-diagram-3"></i></div><h2 class="h5">Network unavailable</h2><p class="text-muted mb-0">{{ network.message }}</p></div></div>
+{% else %}
+{% set s = network.summary %}
+<div class="row g-3 mb-4 network-metrics">
+{% for label, value in [('Unique Payees', s.unique_payees), ('Total Relationships', s.total_relationships), ('Suspicious Relationships', s.suspicious_relationships), ('High-Risk Payees', s.high_risk_payees), ('Largest Relationship', s.largest_relationship.name ~ ' · ₹{:,.0f}'.format(s.largest_relationship.amount)), ('Most Frequent Payee', s.most_frequent_payee.name ~ ' · ' ~ s.most_frequent_payee.count ~ ' txns')] %}
+<div class="col-6 col-lg-4 col-xxl-2"><div class="card metric-card h-100"><div class="card-body"><span class="metric-label">{{ label }}</span><div class="network-metric-value">{{ value }}</div></div></div></div>
+{% endfor %}
+</div>
+
+<div class="card network-toolbar mb-3"><div class="card-body"><div class="row g-3 align-items-end">
+  <div class="col-sm-4 col-lg-3"><label class="form-label" for="risk-filter">Risk Filter</label><select class="form-select" id="risk-filter"><option value="ALL">All</option><option>LOW</option><option>MEDIUM</option><option>HIGH</option></select></div>
+  <div class="col-sm-4 col-lg-3"><label class="form-label" for="count-filter">Minimum Transactions</label><select class="form-select" id="count-filter"><option value="1">All</option><option value="2">2+</option><option value="3">3+</option><option value="5">5+</option></select></div>
+  <div class="col-sm-4 col-lg-3"><label class="form-label" for="show-filter">Show</label><select class="form-select" id="show-filter"><option value="ALL">All Relationships</option><option value="SUSPICIOUS">Suspicious Only</option></select></div>
+  <div class="col-lg-3 d-flex gap-2"><button class="btn btn-outline-primary flex-fill" id="reset-network" type="button"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset</button><button class="btn btn-outline-primary flex-fill" id="focus-risk" type="button"><i class="bi bi-crosshair me-1"></i>Highest Risk</button></div>
+</div></div></div>
+
+<div class="row g-4 mb-4">
+  <div class="col-xl-8"><div class="card network-card h-100"><div class="card-header bg-white d-flex justify-content-between align-items-center"><div><h2 class="section-title">Account Relationship Map</h2><span class="section-kicker">Drag nodes, select relationships, zoom, and pan</span></div><span class="badge text-bg-light border">Showing {{ network.displayed_relationships }} of {{ s.total_relationships }}</span></div><div id="transaction-network" role="img" aria-label="Interactive account and payee transaction network"></div><div id="network-render-error" class="alert alert-warning m-3 d-none">The interactive graph could not load. The accessible relationship table remains available below.</div></div></div>
+  <div class="col-xl-4"><div class="card h-100"><div class="card-header bg-white"><h2 class="section-title">Selected Intelligence</h2><span class="section-kicker">Choose a payee node or relationship edge</span></div><div class="card-body network-detail" id="network-detail"><div class="empty-state py-5"><div class="empty-state-icon"><i class="bi bi-cursor"></i></div><p class="text-muted mb-0">Select an item in the graph or risk list to inspect its actual transaction evidence.</p></div></div></div></div>
+</div>
+
+<div class="row g-4 mb-4">
+ <div class="col-lg-7"><div class="card h-100"><div class="card-header bg-white"><h2 class="section-title">Network Findings</h2></div><div class="card-body"><ul class="explanation-list compact-list">{% for insight in network.insights %}<li>{{ insight }}</li>{% else %}<li>No elevated concentration patterns were calculated.</li>{% endfor %}</ul>{% if network.clusters %}<hr><h3 class="h6">Evidence-based behavioral clusters</h3><ul class="explanation-list compact-list">{% for cluster in network.clusters %}<li><span class="explanation-item-title">{{ cluster.name }}</span><span class="explanation-item-detail">{{ cluster.evidence }} · {{ cluster.count }}</span></li>{% endfor %}</ul>{% endif %}</div></div></div>
+ <div class="col-lg-5"><div class="card h-100"><div class="card-header bg-white"><h2 class="section-title">Highest-Risk Relationships</h2></div><div class="list-group list-group-flush risk-relationship-list">{% for item in network.relationships[:5] %}<button type="button" class="list-group-item list-group-item-action relationship-focus" data-relationship-id="{{ item.id }}"><div class="d-flex justify-content-between"><strong>{{ item.merchant_or_payee }}</strong><span class="risk-badge risk-{{ item.risk_level|lower }}">{{ item.relationship_risk_score }}/100</span></div><small class="text-muted">₹{{ "{:,.2f}".format(item.total_amount) }} across {{ item.transaction_count }} transaction{{ 's' if item.transaction_count != 1 }}</small></button>{% endfor %}</div></div></div>
+</div>
+
+<div class="card mb-4"><div class="card-header bg-white"><h2 class="section-title">Graph Legend</h2></div><div class="card-body network-legend"><span><i class="legend-node"></i>Node size: transaction frequency (bounded 34–72px)</span><span><i class="legend-edge"></i>Edge thickness: bounded frequency and amount volume</span><span><i class="legend-risk low"></i>LOW</span><span><i class="legend-risk medium"></i>MEDIUM</span><span><i class="legend-risk high"></i>HIGH</span></div></div>
+
+<div class="card table-card"><div class="card-header bg-white"><h2 class="section-title">All Relationships</h2><span class="section-kicker">Accessible fallback and complete analysis; the graph is capped at {{ network.display_limit }} relationships and always prioritizes HIGH-risk activity.</span></div><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>Merchant/Payee</th><th>Transactions</th><th>Total Amount</th><th>Average Amount</th><th>Highest Risk</th><th>Relationship Risk</th><th>High-Risk Count</th><th>Action</th></tr></thead><tbody>{% for item in network.relationships %}<tr><td>{{ item.merchant_or_payee }}</td><td>{{ item.transaction_count }}</td><td>₹{{ "{:,.2f}".format(item.total_amount) }}</td><td>₹{{ "{:,.2f}".format(item.average_amount) }}</td><td>{{ item.maximum_risk }}/100</td><td><span class="risk-badge risk-{{ item.risk_level|lower }}">{{ item.relationship_risk_score }}/100</span></td><td>{{ item.high_risk_count }}</td><td><button type="button" class="btn btn-sm btn-outline-primary relationship-focus" data-relationship-id="{{ item.id }}">Inspect</button></td></tr>{% endfor %}</tbody></table></div></div>
+<script id="network-data" type="application/json">{{ network|tojson }}</script>
+<script id="network-config" type="application/json">{{ {'investigate_template': url_for('statement.investigate', analysis_id=analysis_id, row_number=999999)}|tojson }}</script>
+{% endif %}
+{% endblock %}
+{% block scripts %}{% if network.available %}<script src="https://cdn.jsdelivr.net/npm/cytoscape@3.30.4/dist/cytoscape.min.js"></script><script src="{{ url_for('static', filename='js/transaction_network.js') }}"></script>{% endif %}{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}AI-Powered Data Analytics for Fraud Detection in Financial Transactions | FinShield AI{% endblock %}
+{% block content %}
+<section class="hero-panel mb-5">
+    <div class="hero-copy"><div class="page-eyebrow text-info mb-3">FinShield AI · Explainable fraud intelligence</div><h1 class="hero-title">AI-Powered Data Analytics for Fraud Detection in Financial Transactions</h1><p class="hero-text mt-3 mb-4">Monitor transaction behavior, identify anomalies, and investigate suspicious activity with explainable AI.</p><div class="d-flex flex-wrap gap-2"><a class="btn btn-primary btn-lg" href="{{ url_for('transactions.new_transaction') }}"><i class="bi bi-search me-2"></i>Analyze Transaction</a><a class="btn btn-outline-light btn-lg" href="{{ url_for('statement.upload') }}"><i class="bi bi-file-earmark-arrow-up me-2"></i>Analyze Statement</a></div></div>
+</section>
+<section class="mb-5" aria-labelledby="capabilities-title"><div class="text-center mb-4"><div class="page-eyebrow">Platform capabilities</div><h2 id="capabilities-title" class="page-title h2">One workspace for risk analysis</h2></div><div class="row g-4">
+{% set features = [
+('bi-lightning-charge','Real-Time Risk Analysis','Evaluate individual transactions through the saved fraud-detection pipeline.'),
+('bi-activity','Behavioral Anomaly Detection','Compare statement activity with personal spending patterns and robust baselines.'),
+('bi-file-earmark-spreadsheet','Statement Analyzer','Normalize Paytm-style, CSV, and Excel statements automatically.'),
+('bi-shield-exclamation','AI Fraud Investigator','Turn risk signals into evidence, counter-evidence, and review recommendations.'),
+('bi-display','Admin Monitoring','Review system-wide risk, users, transaction queues, and human decisions.'),
+('bi-diagram-3','Explainable Risk Scoring','Understand the dimensions and real evidence behind every elevated score.') ] %}
+{% for icon, title, text in features %}<div class="col-md-6 col-xl-4"><article class="card h-100"><div class="card-body p-4"><span class="feature-icon mb-3"><i class="bi {{ icon }}"></i></span><h3 class="h5 fw-bold">{{ title }}</h3><p class="text-muted mb-0">{{ text }}</p></div></article></div>{% endfor %}</div></section>
+<section class="card border-0 p-4 p-lg-5"><div class="text-center mb-4"><div class="page-eyebrow">How it works</div><h2 class="h3 fw-bold">From transaction to human review</h2></div><div class="row g-4 align-items-start">{% for icon, label in [('bi-credit-card','Transaction / Statement'),('bi-cpu','AI Analysis'),('bi-speedometer2','Risk Score'),('bi-search-heart','Investigation'),('bi-person-check','Human Review')] %}<div class="col-6 col-md workflow-step"><div class="workflow-number"><i class="bi {{ icon }}"></i></div><div class="mt-2 fw-semibold small">{{ label }}</div></div>{% endfor %}</div></section>
+{% endblock %}

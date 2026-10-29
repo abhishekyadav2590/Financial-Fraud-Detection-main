@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}AI-Powered Data Analytics for Fraud Detection in Financial Transactions | FinShield AI{% endblock %}</title>
+    <meta name="description" content="Explainable AI fraud risk monitoring and behavioral anomaly analysis.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-xl navbar-dark app-navbar sticky-top" aria-label="Primary navigation">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('home') }}">
+                <span class="brand-mark"><i class="bi bi-shield-check" aria-hidden="true"></i></span>
+                <span class="brand-copy"><span class="brand-title">FinShield AI</span><span class="brand-subtitle">Financial Transaction Analytics</span></span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavigation" aria-controls="mainNavigation" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="mainNavigation">
+            <div class="navbar-nav ms-auto align-items-xl-center gap-xl-1">
+                <a class="nav-link {{ 'active' if request.endpoint == 'home' }}" href="{{ url_for('home') }}"><i class="bi bi-house me-1" aria-hidden="true"></i>Home</a>
+                {% if current_user.is_authenticated %}
+                    {% if current_user.role == 'admin' %}
+                        <a class="nav-link {{ 'active' if request.endpoint == 'admin.dashboard' }}" href="{{ url_for('admin.dashboard') }}"><i class="bi bi-grid me-1"></i>Operations</a>
+                        <a class="nav-link {{ 'active' if request.endpoint == 'admin.transactions' }}" href="{{ url_for('admin.transactions') }}"><i class="bi bi-list-check me-1"></i>Transactions</a>
+                        <a class="nav-link {{ 'active' if request.endpoint == 'admin.audit_log' }}" href="{{ url_for('admin.audit_log') }}"><i class="bi bi-journal-check me-1"></i>Audit Log</a>
+                        <a class="nav-link {{ 'active' if request.endpoint == 'admin.users' }}" href="{{ url_for('admin.users') }}"><i class="bi bi-people me-1"></i>Users</a>
+                        <a class="nav-link {{ 'active' if request.endpoint == 'admin.model_intelligence' }}" href="{{ url_for('admin.model_intelligence') }}"><i class="bi bi-cpu me-1"></i>Model Intelligence</a>
+                        <a class="nav-link {{ 'active' if request.endpoint == 'admin.bulk_predict' }}" href="{{ url_for('admin.bulk_predict') }}"><i class="bi bi-files me-1"></i>Bulk Analysis</a>
+                    {% else %}
+                        <a class="nav-link {{ 'active' if request.endpoint == 'dashboard' }}" href="{{ url_for('dashboard') }}"><i class="bi bi-grid me-1"></i>Dashboard</a>
+                        <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('assistant.') }}" href="{{ url_for('assistant.home') }}"><i class="bi bi-chat-square-text me-1"></i>Fraud Assistant</a>
+                        <a class="nav-link {{ 'active' if request.endpoint == 'transactions.new_transaction' }}" href="{{ url_for('transactions.new_transaction') }}"><i class="bi bi-search me-1"></i>Analyze</a>
+                        <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('statement.') }}" href="{{ url_for('statement.upload') }}"><i class="bi bi-file-earmark-bar-graph me-1"></i>Statement Analyzer</a>
+                        <a class="nav-link {{ 'active' if request.endpoint == 'transactions.transaction_history' }}" href="{{ url_for('transactions.transaction_history') }}"><i class="bi bi-clock-history me-1"></i>History</a>
+                    {% endif %}
+                    <div class="nav-item dropdown ms-xl-2">
+                        <button class="btn user-menu dropdown-toggle d-flex align-items-center gap-2" data-bs-toggle="dropdown" aria-expanded="false"><span class="user-avatar">{{ current_user.full_name[:1]|upper }}</span><span class="text-truncate" style="max-width: 130px">{{ current_user.full_name }}</span></button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('account') }}"><i class="bi bi-person me-2"></i>Account</a></li>
+                            {% if current_user.role == 'admin' %}<li><a class="dropdown-item" href="{{ url_for('dashboard') }}"><i class="bi bi-person-workspace me-2"></i>User dashboard</a></li><li><a class="dropdown-item" href="{{ url_for('statement.upload') }}"><i class="bi bi-file-earmark-bar-graph me-2"></i>Statement analyzer</a></li>{% endif %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><form method="post" action="{{ url_for('auth.logout') }}">{{ logout_form.hidden_tag() }}<button class="dropdown-item text-danger" type="submit"><i class="bi bi-box-arrow-right me-2"></i>Logout</button></form></li>
+                        </ul>
+                    </div>
+                {% else %}
+                    <a class="nav-link" href="{{ url_for('auth.login') }}">Log in</a>
+                    <a class="btn btn-primary ms-xl-2" href="{{ url_for('auth.register') }}">Create account</a>
+                {% endif %}
+            </div>
+            </div>
+        </div>
+    </nav>
+    <main class="container app-main">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert"><i class="bi bi-info-circle me-2"></i>{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>
+            {% endfor %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </main>
+    <footer class="app-footer py-4">
+        <div class="container d-flex flex-column flex-md-row justify-content-between gap-2 small"><span><i class="bi bi-shield-check me-1"></i>FinShield AI · Financial Transaction Analytics</span><span>Risk assessments support human review and are not definitive fraud determinations.</span></div>
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

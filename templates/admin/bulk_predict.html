@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Bulk Fraud Analysis | FinShield AI{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="text-center mb-4"><div class="page-eyebrow">Administrator tool</div><h1 class="page-title">Bulk Fraud Analysis</h1><p class="page-subtitle mx-auto">Evaluate model-ready transactions in one secure in-memory batch.</p></div><div class="card">
+            <div class="card-body p-4 p-lg-5">
+                <h2 class="section-title">Upload model-ready CSV</h2>
+                <ul class="explanation-list compact-list mb-3"><li>Upload up to <strong>500 transactions</strong> in UTF-8 CSV format.</li><li>Maximum file size: <strong>2 MB</strong>.</li><li>Results stay in memory and are not added to transaction history.</li></ul>
+                <div class="alert alert-info">
+                    Use only the expected raw model fields. Download the template for supported columns and categories.
+                    <a class="alert-link" href="{{ url_for('static', filename='samples/bulk_transactions_template.csv') }}" download>Download CSV Template</a>
+                </div>
+                <form method="post" enctype="multipart/form-data" novalidate data-submit-once>
+                    {{ form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ form.csv_file.label(class="form-label") }}
+                        {{ form.csv_file(class="form-control" + (" is-invalid" if form.csv_file.errors else ""), accept=".csv,text/csv") }}
+                        {% for error in form.csv_file.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    </div>
+                    {{ form.submit(class="btn btn-primary") }}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

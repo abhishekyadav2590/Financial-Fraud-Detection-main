@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Fraud Assistant | FinShield AI{% endblock %}
+{% block content %}
+<header class="assistant-page-header">
+    <div>
+        <p class="page-eyebrow">Evidence-grounded help</p>
+        <h1 class="page-title">Fraud Assistant</h1>
+        <p class="page-subtitle">Ask about saved transaction assessments or general fraud-prevention practices.</p>
+    </div>
+    <span class="assistant-mode"><i class="bi bi-database-check" aria-hidden="true"></i>Private, account-scoped retrieval</span>
+</header>
+
+<div class="assistant-layout">
+    <section class="assistant-panel" aria-labelledby="assistantQuestionHeading">
+        <div class="assistant-panel-heading">
+            <span class="assistant-icon"><i class="bi bi-chat-square-text" aria-hidden="true"></i></span>
+            <div>
+                <h2 id="assistantQuestionHeading">Ask a question</h2>
+                <p>Transaction-specific answers use only records available to your account.</p>
+            </div>
+        </div>
+        <div class="assistant-disclosure" role="note">
+            <i class="bi bi-info-circle" aria-hidden="true"></i>
+            <span>This is a local rules-and-retrieval helper, not a connected language model. It does not confirm fraud or access another user's transactions.</span>
+        </div>
+        <form method="post" class="assistant-question-form">
+            {{ form.hidden_tag() }}
+            {{ form.question.label(class="form-label") }}
+            {{ form.question(class="form-control assistant-question-input" + (" is-invalid" if form.question.errors else ""), rows="3", maxlength="300", placeholder="For example: What does the risk level mean?", aria_describedby="assistantQuestionHelp" + (" assistantQuestionErrors" if form.question.errors else ""), aria_invalid="true" if form.question.errors else "false") }}
+            <div id="assistantQuestionHelp" class="form-text">Maximum 300 characters. Avoid entering passwords, account numbers, or other sensitive credentials.</div>
+            {% if form.question.errors %}
+            <div id="assistantQuestionErrors" class="invalid-feedback d-block" role="alert">
+                {% for error in form.question.errors %}<div>{{ error }}</div>{% endfor %}
+            </div>
+            {% endif %}
+            {{ form.submit(class="btn btn-primary mt-3", value="Ask assistant") }}
+        </form>
+
+        <div class="assistant-suggestions">
+            <h3>Suggested questions</h3>
+            <div class="assistant-suggestion-list">
+                {% for example in (
+                    "Summarize my analyzed transactions",
+                    "Show my recent fraud alerts",
+                    "What does fraud probability mean?",
+                    "How can I protect myself from payment fraud?"
+                ) %}
+                <a href="{{ url_for('assistant.home', example=example) }}">{{ example }}<i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <aside class="assistant-boundaries" aria-labelledby="assistantBoundariesHeading">
+        <p class="dashboard-panel-kicker">Scope and limitations</p>
+        <h2 id="assistantBoundariesHeading">What it can answer</h2>
+        <ul>
+            <li>Look up a saved transaction by its reference.</li>
+            <li>Summarize your saved model predictions and risk levels.</li>
+            <li>List recent model-flagged or high-risk records.</li>
+            <li>Explain the meaning of probabilities, risk bands, and review states.</li>
+            <li>Share general fraud-prevention guidance.</li>
+        </ul>
+        <p>Model predictions and human review statuses are kept separate. The application does not currently store a confirmed-fraud outcome.</p>
+    </aside>
+</div>
+
+{% if answer %}
+<section class="assistant-answer-panel" aria-labelledby="assistantAnswerHeading" aria-live="polite">
+    <div class="assistant-answer-heading">
+        <span class="assistant-icon"><i class="bi bi-shield-check" aria-hidden="true"></i></span>
+        <div><p class="dashboard-panel-kicker mb-1">{{ "General guidance" if answer.general_guidance else "Response from your saved records" }}</p><h2 id="assistantAnswerHeading">Assistant response</h2></div>
+    </div>
+    <p class="assistant-answer-text">{{ answer.answer }}</p>
+    {% if answer.evidence %}
+    <h3>Supporting evidence</h3>
+    <dl class="assistant-evidence-list">
+        {% for item in answer.evidence %}
+        <div><dt>{{ item.label }}</dt><dd>{{ item.value }}</dd></div>
+        {% endfor %}
+    </dl>
+    {% endif %}
+    <p class="assistant-answer-disclaimer">Evidence is limited to the records and saved model outputs described above. A model flag or review state is not a confirmed fraud determination.</p>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,47 @@
+# Virtual environments and local configuration
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*.pyc
+
+# Test, coverage, and tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Build output
+build/
+dist/
+*.egg-info/
+
+# Editor and operating-system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.log
+*.tmp
+*.swp
+*~
+tmp/
+output/
+# Local databases and sidecars
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+fraud_analysis_*.csv
+fraud_analysis_*.pdf
+statement_risk_analysis_*.csv
+fraud_investigation_*.pdf
+*.coverage.*

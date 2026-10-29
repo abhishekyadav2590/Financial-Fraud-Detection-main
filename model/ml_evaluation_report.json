@@ -1,0 +1,251 @@
+{
+  "dataset": {
+    "rows": 20000,
+    "genuine": 19011,
+    "fraud": 989,
+    "fraud_ratio": 0.04945,
+    "missing_values": 0,
+    "duplicate_transaction_ids": 0
+  },
+  "numeric_by_class": {
+    "0": {
+      "('amount', 'mean')": 1033.6103,
+      "('amount', 'median')": 508.03,
+      "('transaction_hour', 'mean')": 13.8838,
+      "('transaction_hour', 'median')": 14.0,
+      "('account_age_days', 'mean')": 1826.2362,
+      "('account_age_days', 'median')": 1814.0,
+      "('transactions_last_24h', 'mean')": 4.4282,
+      "('transactions_last_24h', 'median')": 3.0,
+      "('average_transaction_amount', 'mean')": 708.6956,
+      "('average_transaction_amount', 'median')": 498.14
+    },
+    "1": {
+      "('amount', 'mean')": 1574.1833,
+      "('amount', 'median')": 667.86,
+      "('transaction_hour', 'mean')": 13.2093,
+      "('transaction_hour', 'median')": 14.0,
+      "('account_age_days', 'mean')": 1819.366,
+      "('account_age_days', 'median')": 1873.0,
+      "('transactions_last_24h', 'mean')": 6.5268,
+      "('transactions_last_24h', 'median')": 4.0,
+      "('average_transaction_amount', 'mean')": 704.3734,
+      "('average_transaction_amount', 'median')": 514.35
+    }
+  },
+  "categorical_distributions": {
+    "transaction_type": {
+      "0": {
+        "bank_transfer": 0.1622,
+        "card_payment": 0.4841,
+        "cash_withdrawal": 0.0682,
+        "crypto_purchase": 0.0289,
+        "online_purchase": 0.2565
+      },
+      "1": {
+        "bank_transfer": 0.2872,
+        "card_payment": 0.3852,
+        "cash_withdrawal": 0.0637,
+        "crypto_purchase": 0.0597,
+        "online_purchase": 0.2042
+      }
+    },
+    "device_type": {
+      "0": {
+        "atm": 0.0371,
+        "desktop": 0.2744,
+        "mobile": 0.617,
+        "tablet": 0.0715
+      },
+      "1": {
+        "atm": 0.0364,
+        "desktop": 0.2568,
+        "mobile": 0.6441,
+        "tablet": 0.0627
+      }
+    },
+    "is_new_device": {
+      "0": {
+        "0": 0.8695,
+        "1": 0.1305
+      },
+      "1": {
+        "0": 0.6785,
+        "1": 0.3215
+      }
+    },
+    "location_type": {
+      "0": {
+        "international": 0.0769,
+        "unusual_domestic": 0.1691,
+        "usual": 0.7541
+      },
+      "1": {
+        "international": 0.1992,
+        "unusual_domestic": 0.275,
+        "usual": 0.5258
+      }
+    },
+    "merchant_category": {
+      "0": {
+        "electronics": 0.0944,
+        "entertainment": 0.079,
+        "gaming": 0.049,
+        "groceries": 0.2175,
+        "restaurants": 0.16,
+        "retail": 0.1953,
+        "travel": 0.0851,
+        "utilities": 0.1198
+      },
+      "1": {
+        "electronics": 0.1082,
+        "entertainment": 0.0748,
+        "gaming": 0.0677,
+        "groceries": 0.2103,
+        "restaurants": 0.1618,
+        "retail": 0.1881,
+        "travel": 0.0819,
+        "utilities": 0.1072
+      }
+    }
+  },
+  "numeric_target_correlations": {
+    "transactions_last_24h": 0.0908,
+    "amount": 0.0531,
+    "transaction_hour": -0.0262,
+    "account_age_days": -0.0014,
+    "average_transaction_amount": -0.0013
+  },
+  "selected_model": "Logistic Regression",
+  "class_weight": null,
+  "prediction_threshold": 0.14844386194802967,
+  "risk_thresholds": {
+    "low_max": 0.1,
+    "medium_max": 0.3
+  },
+  "held_out_test_metrics": {
+    "accuracy": 0.918,
+    "precision": 0.24206349206349206,
+    "recall": 0.30808080808080807,
+    "f1_score": 0.27111111111111114,
+    "roc_auc": 0.7254794127492707,
+    "pr_auc": 0.18802503916559513,
+    "brier_score": 0.04379514877001907,
+    "false_positive_rate": 0.05023671751709626,
+    "false_negative_rate": 0.6919191919191919,
+    "confusion_matrix": [
+      [
+        3611,
+        191
+      ],
+      [
+        137,
+        61
+      ]
+    ]
+  },
+  "scenarios": {
+    "normal_control": {
+      "predicted_class": 0,
+      "prediction": "genuine",
+      "fraud_probability": 0.017378,
+      "genuine_probability": 0.982622,
+      "risk_level": "LOW",
+      "model_name": "Logistic Regression"
+    },
+    "suspicious_control": {
+      "predicted_class": 1,
+      "prediction": "fraud",
+      "fraud_probability": 0.998954,
+      "genuine_probability": 0.001046,
+      "risk_level": "HIGH",
+      "model_name": "Logistic Regression"
+    },
+    "large_but_established": {
+      "predicted_class": 0,
+      "prediction": "genuine",
+      "fraud_probability": 0.021189,
+      "genuine_probability": 0.978811,
+      "risk_level": "LOW",
+      "model_name": "Logistic Regression"
+    },
+    "small_but_unusual": {
+      "predicted_class": 1,
+      "prediction": "fraud",
+      "fraud_probability": 0.528062,
+      "genuine_probability": 0.471938,
+      "risk_level": "HIGH",
+      "model_name": "Logistic Regression"
+    },
+    "bursty_transfer": {
+      "predicted_class": 0,
+      "prediction": "genuine",
+      "fraud_probability": 0.115327,
+      "genuine_probability": 0.884673,
+      "risk_level": "MEDIUM",
+      "model_name": "Logistic Regression"
+    }
+  },
+  "logistic_regression": {
+    "intercept": -1.0972919985817025,
+    "most_negative_coefficients": {
+      "categorical__location_type_usual": -0.871701,
+      "categorical__is_new_device_0": -0.857514,
+      "categorical__transaction_type_card_payment": -0.558999,
+      "categorical__transaction_type_online_purchase": -0.548013,
+      "categorical__transaction_type_cash_withdrawal": -0.441088,
+      "categorical__location_type_unusual_domestic": -0.352077,
+      "categorical__merchant_category_utilities": -0.332488,
+      "categorical__device_type_tablet": -0.315965,
+      "categorical__device_type_desktop": -0.290927,
+      "categorical__device_type_atm": -0.279118
+    },
+    "most_positive_coefficients": {
+      "categorical__transaction_type_crypto_purchase": 0.305756,
+      "numerical__transactions_last_24h": 0.243358,
+      "numerical__new_device_unusual_location": 0.241098,
+      "numerical__amount_ratio": 0.218564,
+      "categorical__transaction_type_bank_transfer": 0.193995,
+      "categorical__merchant_category_gaming": 0.182578,
+      "numerical__unusual_hour": 0.17605,
+      "categorical__location_type_international": 0.175429,
+      "numerical__young_account": 0.097686,
+      "numerical__transaction_burst": 0.090814
+    }
+  },
+  "held_out_probability_distribution": {
+    "overall": {
+      "0.0": 0.009647,
+      "0.1": 0.015085,
+      "0.25": 0.018805,
+      "0.5": 0.029582,
+      "0.75": 0.049104,
+      "0.9": 0.095836,
+      "0.95": 0.17977,
+      "0.99": 0.35755,
+      "1.0": 0.987505
+    },
+    "genuine": {
+      "0.0": 0.009647,
+      "0.1": 0.014984,
+      "0.25": 0.018617,
+      "0.5": 0.028713,
+      "0.75": 0.046805,
+      "0.9": 0.082421,
+      "0.95": 0.149279,
+      "0.99": 0.30373,
+      "1.0": 0.987505
+    },
+    "fraud": {
+      "0.0": 0.011527,
+      "0.1": 0.019336,
+      "0.25": 0.03062,
+      "0.5": 0.06597,
+      "0.75": 0.18714,
+      "0.9": 0.330527,
+      "0.95": 0.405391,
+      "0.99": 0.520599,
+      "1.0": 0.975396
+    }
+  }
+}
