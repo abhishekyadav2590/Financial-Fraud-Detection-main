@@ -12,6 +12,7 @@ set "HEALTH_URL=http://127.0.0.1:5000/api/health"
 set "APP_ENV=development"
 set "FLASK_DEBUG=false"
 set "SESSION_COOKIE_SECURE=false"
+if not defined FINSHIELD_HOST set "FINSHIELD_HOST=127.0.0.1"
 
 if exist ".venv\Scripts\python.exe" (
     set "PYTHON=%PROJECT_DIR%.venv\Scripts\python.exe"
@@ -36,7 +37,7 @@ if exist ".venv\Scripts\python.exe" (
     set "PYTHON=%PROJECT_DIR%.venv\Scripts\python.exe"
 )
 
-"%PYTHON%" -c "import flask, flask_login, flask_migrate, flask_sqlalchemy, flask_wtf, joblib, openpyxl, pandas, reportlab, sklearn" >nul 2>nul
+"%PYTHON%" -c "import flask, flask_login, flask_migrate, flask_sqlalchemy, flask_wtf, joblib, openpyxl, pandas, pypdf, reportlab, sklearn" >nul 2>nul
 if errorlevel 1 (
     echo Installing the pinned project dependencies into .venv...
     "%PYTHON%" -m pip install -r requirements.lock

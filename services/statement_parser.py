@@ -4,13 +4,26 @@ import zipfile
 from pathlib import Path
 
 import pandas as pd
+from pypdf import PdfReader
+from pypdf.errors import PdfReadError
 
 
 MAX_STATEMENT_BYTES = 3 * 1024 * 1024
 MAX_STATEMENT_ROWS = 1_000
 MAX_HOUR_ONLY_ROWS = 20_000
-SUPPORTED_EXTENSIONS = {".csv", ".xlsx"}
+MAX_PDF_PAGES = 100
+SUPPORTED_EXTENSIONS = {".csv", ".xlsx", ".pdf"}
 MAX_XLSX_UNCOMPRESSED_BYTES = 25 * 1024 * 1024
+PDF_DATE_PATTERN = re.compile(
+    r"\b(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}-\d{1,2}-\d{1,2}|"
+    r"\d{1,2}[ -][A-Za-z]{3,9}[ -]\d{2,4})\b",
+    re.IGNORECASE,
+)
+PDF_AMOUNT_PATTERN = re.compile(
+    r"(?<![\w/])(?:\(?\s*-?\s*(?:₹|INR|Rs\.?|[$€£])?\s*"
+    r"\d[\d,]*\.\d{2}\s*\)?)(?![\w/])",
+    re.IGNORECASE,
+)
 
 
 class StatementParseError(ValueError):
@@ -99,14 +112,113 @@ def _parse_hour(row, mapping, timestamp=None):
     return int(hour)
 
 
+def _parse_pdf_statement(file_bytes):
+    try:
+        reader = PdfReader(io.BytesIO(file_bytes), strict=False)
+        if reader.is_encrypted:
+            raise StatementParseError(
+                "Password-protected PDFs are not supported. Export an unlocked statement."
+            )
+        if len(reader.pages) > MAX_PDF_PAGES:
+            raise StatementParseError(
+                f"PDF statements cannot contain more than {MAX_PDF_PAGES} pages."
+            )
+        pages = [page.extract_text(extraction_mode="layout") or "" for page in reader.pages]
+    except StatementParseError:
+        raise
+    except (PdfReadError, OSError, ValueError) as error:
+        raise StatementParseError("The uploaded PDF is not a readable statement.") from error
+
+    if not any(page.strip() for page in pages):
+        raise StatementParseError(
+            "This PDF contains no extractable text. Export a text-based PDF or CSV/XLSX statement; scanned-image OCR is not supported."
+        )
+
+    transactions = []
+    balance_column_start = None
+    for page_text in pages:
+        for line in page_text.splitlines():
+            balance_header = re.search(r"\bbalance\b", line, re.IGNORECASE)
+            if balance_header:
+                balance_column_start = balance_header.start()
+
+            date_matches = list(PDF_DATE_PATTERN.finditer(line))
+            amount_matches = list(PDF_AMOUNT_PATTERN.finditer(line))
+            if not date_matches or not amount_matches:
+                continue
+
+            date_text = date_matches[0].group()
+            timestamp = pd.to_datetime(date_text, errors="coerce", dayfirst=True)
+            if pd.isna(timestamp):
+                continue
+
+            if balance_column_start is not None:
+                transaction_amounts = [
+                    match for match in amount_matches
+                    if match.start() < balance_column_start - 8
+                ]
+            else:
+                transaction_amounts = amount_matches[:1]
+            if not transaction_amounts:
+                continue
+
+            amount_match = transaction_amounts[-1]
+            amount = _parse_amount(amount_match.group())
+            if amount is None:
+                continue
+
+            marker = re.search(r"\b(DR|CR)\b", line, re.IGNORECASE)
+            description = line[date_matches[-1].end():amount_match.start()]
+            if marker:
+                description = description.replace(marker.group(), " ")
+            description = " ".join(description.split()).strip(" -|")
+            debit_credit_type = marker.group().upper() if marker else None
+            row_number = len(transactions) + 1
+            transactions.append(
+                {
+                    "statement_row_number": row_number,
+                    "transaction_date": timestamp.to_pydatetime().isoformat(),
+                    "transaction_time": None,
+                    "amount": abs(amount),
+                    "transaction_type": debit_credit_type,
+                    "merchant_or_payee": description or None,
+                    "merchant_category": None,
+                    "description": description or None,
+                    "debit_credit_type": debit_credit_type,
+                    "transaction_status": None,
+                    "reference_id": None,
+                    "transaction_hour": None,
+                    "date": timestamp.date().isoformat(),
+                    "time": None,
+                }
+            )
+
+    if not transactions:
+        raise StatementParseError(
+            "Could not identify dated transaction rows in this PDF. Export the statement as CSV/XLSX and try again."
+        )
+    if len(transactions) > MAX_STATEMENT_ROWS:
+        raise StatementParseError(
+            f"Calendar-dated statements cannot contain more than {MAX_STATEMENT_ROWS:,} transactions."
+        )
+    return transactions
+
+
 def parse_statement(file_bytes, filename):
     extension = Path(filename or "").suffix.lower()
     if extension not in SUPPORTED_EXTENSIONS:
-        raise StatementParseError("Only CSV and XLSX statement files are supported.")
+        raise StatementParseError("Only PDF, CSV, and XLSX statement files are supported.")
     if not file_bytes:
         raise StatementParseError("The uploaded statement is empty.")
     if len(file_bytes) > MAX_STATEMENT_BYTES:
         raise StatementParseError("The statement exceeds the 3 MB upload limit.")
+
+    if extension == ".pdf":
+        transactions = _parse_pdf_statement(file_bytes)
+        return transactions, {
+            "transaction_date": "PDF transaction date",
+            "amount": "PDF transaction amount",
+        }
 
     if extension == ".xlsx":
         try:

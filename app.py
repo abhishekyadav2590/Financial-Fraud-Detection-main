@@ -1,4 +1,5 @@
 import logging
+import os
 
 from flask import Flask, jsonify, render_template, request
 from flask_login import current_user, login_required
@@ -160,4 +161,7 @@ app = create_app()
 
 
 if __name__ == "__main__":
-    app.run(debug=app.config["DEBUG"])
+    app.run(
+        host=os.getenv("FINSHIELD_HOST", "127.0.0.1"),
+        debug=app.config["DEBUG"],
+    )

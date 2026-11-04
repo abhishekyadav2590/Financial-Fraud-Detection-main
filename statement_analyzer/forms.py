@@ -8,7 +8,7 @@ class StatementUploadForm(FlaskForm):
         "Transaction statement",
         validators=[
             FileRequired(message="Choose a statement file."),
-            FileAllowed(["csv", "xlsx"], "Only CSV and XLSX files are supported."),
+            FileAllowed(["pdf", "csv", "xlsx"], "Only PDF, CSV, and XLSX files are supported."),
         ],
     )
     submit = SubmitField("Analyze statement")

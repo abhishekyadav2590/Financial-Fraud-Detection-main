@@ -47,6 +47,8 @@ No `pip-audit`, Bandit, or Safety scanner was installed in the existing virtual 
 ## Local safeguards
 
 - Keep `FLASK_DEBUG=false` except during local development.
+- `start_demo.bat` binds to the local computer only. `start_team_demo.bat` is an explicit opt-in that binds to all network interfaces for a trusted private LAN; it is not an internet deployment. The unauthenticated prediction endpoint and development server are reachable by devices able to access that LAN, so do not use public Wi-Fi or expose/forward port 5000 to the internet.
+- The team demo stores its SQLite database on the host computer. Share the LAN link only with trusted teammates, use individual accounts, and do not upload real statements unless you have authorization and an appropriate privacy basis.
 - Do not commit `.env`, database files, uploaded statements, user data, or model credentials.
 - Take a database backup before schema migrations on a database containing data.
 - Create administrators only through the interactive CLI and protect access to the machine and database.

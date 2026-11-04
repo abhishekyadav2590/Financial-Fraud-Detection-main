@@ -16,7 +16,7 @@ A college project demonstrating an end-to-end fraud risk workflow with Flask and
 - User transaction history and risk summaries
 - Administrator dashboards, review status updates, filters, and pagination
 - Admin-only CSV bulk analysis with row/file limits and CSV/PDF reports
-- Authenticated CSV/XLSX statement analysis with behavioral anomaly ranking
+- Authenticated PDF/CSV/XLSX statement analysis with behavioral anomaly ranking
 - Owner-scoped, temporary statement results; admin-scoped, temporary bulk results
 - Atomic transaction and analyst-review writes, plus a read-only review audit log
 - Security response headers and `no-store` caching on dynamic responses
@@ -26,7 +26,7 @@ A college project demonstrating an end-to-end fraud risk workflow with Flask and
 ### Windows quick start
 
 ```powershell
-git clone <PRIVATE_REPOSITORY_URL>
+git clone https://github.com/abhishekyadav2590/Financial-Fraud-Detection-main.git
 Set-Location .\Financial-Fraud-Detection-main
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.lock
@@ -62,9 +62,9 @@ Run the full tests with:
 
 ### Share with your team
 
-The local Git repository is initialized, but has no commits or remote. The repository should be **private** because it contains project code and the saved model. Before sharing, review `git status` and confirm `.env`, `.venv`, and `instance/fraud_detection.db` are ignored; then stage and commit the reviewed project in VS Code. Use **Publish to GitHub → Private repository** to create and push to GitHub, and invite teammates as collaborators in repository settings. Do not push this local database, `.env`, passwords, or real transaction data. No GitHub repository has been created or pushed by this setup.
+For a temporary demo with teammates on the **same trusted Wi-Fi/LAN**, stop any already-running local demo and run `start_team_demo.bat`. It starts the app on the network interface and prints a link such as `http://192.168.x.x:5000/`; share that link only with teammates on that network. Keep the host computer and server running. Each teammate can register a separate account, but the demo database and uploaded analysis are on the host computer. Allow the private-network firewall prompt only if appropriate. Do not expose this development server to the public internet.
 
-Teammates clone the private repository, install Python 3.12, follow the Windows quick start, and register their own users locally. Each teammate's localhost and database are private to their own machine; this does not create a shared live demo.
+For source-code collaboration, this repository is hosted at https://github.com/abhishekyadav2590/Financial-Fraud-Detection-main. Invite teammates through the repository's access settings. Do not publish `.env`, `.venv`, local databases, passwords, or real transaction statements. `dataset/*.pdf` is ignored for this reason; the local PDFs remain on the host computer. Teammates can clone the project and run `start_demo.bat` locally.
 
 ## Model and dataset
 
@@ -95,9 +95,9 @@ See [Research readiness](./docs/RESEARCH_READINESS.md) for the verified dataset/
 
 ## Smart Statement Analyzer
 
-Authenticated users can open `/statement-analyzer` and upload a Paytm-style or generic CSV/XLSX statement, including the project transaction-feature CSV format with `amount` and `transaction_hour`. Calendar-dated bank statements remain limited to 1,000 rows; hour-only files are limited to 20,000 rows and the existing 3 MB upload limit. Results are paginated. The original upload is processed in memory and is never saved; detailed results remain in an owner-scoped temporary cache for approximately 30 minutes.
+Authenticated users can open `/statement-analyzer` and upload a Paytm-style or generic CSV/XLSX statement, including the project transaction-feature CSV format with `amount` and `transaction_hour`. A PDF statement is accepted only when it contains extractable text and transaction rows that the parser can identify; scanned-image PDFs need to be exported to CSV/XLSX first. Calendar-dated statements are limited to 1,000 rows; hour-only files are limited to 20,000 rows and all uploads retain the 3 MB limit. Results are paginated. The original upload is processed in memory and is never saved; detailed results remain in an owner-scoped temporary cache for approximately 30 minutes.
 
-Statement rows receive an explainable behavioral anomaly score based on available amount, time-of-day, transaction type, merchant/payee, and merchant-category data. Calendar-date-based trends, daily spending, and short-window frequency checks are omitted when dates are absent; no date is inferred from `transaction_hour`. The saved fraud model is not invoked for imported rows. A source `is_fraud` column is ignored and is not treated as a verified fraud finding.
+Statement rows receive an explainable behavioral anomaly score based on available amount, time-of-day, transaction type, merchant/payee, and merchant-category data. Calendar-date-based trends, daily spending, and short-window frequency checks are omitted when dates are absent; no date is inferred from `transaction_hour`. The saved fraud model is not invoked for imported rows: account statements do not supply independently verified fraud labels, so they must not be added as labeled classifier training data. A source `is_fraud` column is ignored and is not treated as a verified fraud finding.
 
 Medium- and high-risk rows include an **AI Investigate** action. The deterministic local investigator produces an investigation score, evidence and counter-evidence, risk-pattern explanation, explicit evidence coverage, behavior comparison, nearby transaction timeline, recommended human checks, radar chart, and downloadable PDF. No external AI service or API key is required, and the investigator never changes an administrator's review decision automatically.
 

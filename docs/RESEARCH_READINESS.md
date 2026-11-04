@@ -47,6 +47,14 @@ These are proposed questions, not established findings:
 
 Any subgroup or fairness analysis requires suitable, lawfully obtained, documented attributes and a justified study design. The current feature set does not establish demographic fairness and should not be used to claim it.
 
+## Research-paper and synopsis integrity
+
+The project folder contains PDF copies of a paper, a synopsis, and similarity/AI-detection reports, but no editable source documents or independent verification data. This project cannot guarantee a detector score, and detector results are not proof of authorship or plagiarism. Do not rewrite work to evade a detector or target a particular similarity percentage. Instead, write from the actual experiment and your own understanding, cite borrowed ideas and wording, quote when exact wording is necessary, verify every reference, distinguish proposed work from completed results, and follow your institution's disclosure and authorship rules for AI-assisted work. Keep drafts, source notes, experiment logs, and version history so the research process is transparent.
+
+For accuracy, any new paper or synopsis should clearly state that the classifier was trained on synthetic generated labels, report results from the stated evaluation split without implying real-world validation, and avoid presenting account-statement anomaly scores as model predictions or confirmed fraud. The two account-statement PDFs are private exploratory inputs; without independently verified fraud outcomes and consent/provenance documentation, they are not labeled training data and must not be used to claim model performance.
+
+The supplied October statement filename indicates that a page was removed. Its parsed rows therefore represent only the supplied PDF, not a verified complete account history; do not make completeness or longitudinal-behavior claims from it until the source owner confirms the missing-page context.
+
 ## Recommended study protocol
 
 1. Preserve the current model, dataset, metadata, evaluation report, and evaluation artifacts. Conduct experiments in a separate copy or use versioned experiment outputs so the delivered artifacts remain unchanged.
@@ -72,7 +80,7 @@ Any subgroup or fairness analysis requires suitable, lawfully obtained, document
 
 ## Reproducibility and preservation warning
 
-The training scripts are reproducibility tools, not harmless read-only checks. `generate_dataset.py` overwrites `dataset/transactions.csv`; `train_final_model.py` writes the saved model, metadata, and evaluation artifacts. Before running either command, work in a separate project copy and preserve the original files. The Step 9 acceptance run completed 18 passing test suites; those tests do not validate real-world model performance.
+The training scripts are reproducibility tools, not harmless read-only checks. `generate_dataset.py` overwrites `dataset/transactions.csv`; `train_final_model.py` writes the saved model, metadata, and evaluation artifacts. Before running either command, work in a separate project copy and preserve the original files. The latest local verification completed all 18 test suites; those tests do not validate real-world model performance.
 
 ## References for methodology and implementation
 

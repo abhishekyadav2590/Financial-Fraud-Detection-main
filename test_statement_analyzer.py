@@ -3,6 +3,7 @@ import io
 from pathlib import Path
 
 import pandas as pd
+from reportlab.pdfgen import canvas
 
 from app import create_app
 from extensions import db
@@ -76,6 +77,35 @@ def xlsx_bytes():
     return output.getvalue()
 
 
+def pdf_statement_bytes():
+    output = io.BytesIO()
+    document = canvas.Canvas(output)
+    document.drawString(40, 760, "Date")
+    document.drawString(250, 760, "Particulars")
+    document.drawString(400, 760, "Withdrawal")
+    document.drawString(510, 760, "Balance")
+    document.drawString(40, 735, "01/08/2026")
+    document.drawString(250, 735, "Coffee Shop")
+    document.drawString(400, 735, "100.00")
+    document.drawString(510, 735, "900.00")
+    document.drawString(40, 710, "02/08/2026")
+    document.drawString(250, 710, "Grocery Store")
+    document.drawString(400, 710, "120.00")
+    document.drawString(510, 710, "780.00")
+    document.drawString(40, 685, "03/08/2026")
+    document.drawString(250, 685, "Coffee Shop")
+    document.drawString(400, 685, "95.00")
+    document.drawString(510, 685, "685.00")
+    document.save()
+    return output.getvalue()
+
+
+def blank_pdf_bytes():
+    output = io.BytesIO()
+    canvas.Canvas(output).save()
+    return output.getvalue()
+
+
 def run_tests():
     mapping = detect_column_mapping(
         ["Txn Amount", "Date & Time", "Payment Mode", "Paid To", "Txn ID"]
@@ -124,6 +154,25 @@ def run_tests():
     assert fraud_summary["charts"]["hours"]["values"][2] == 2
     assert fraud_summary["charts"]["merchant_categories"]["labels"][0] == "groceries"
     assert all("is_fraud" not in row for row in fraud_summary["results"])
+
+    pdf_rows, pdf_mapping = parse_statement(pdf_statement_bytes(), "statement.pdf")
+    assert len(pdf_rows) == 3
+    assert pdf_mapping["amount"] == "PDF transaction amount"
+    assert [row["amount"] for row in pdf_rows] == [100, 120, 95]
+    assert pdf_rows[0]["transaction_date"].startswith("2026-08-01")
+    assert pdf_rows[0]["merchant_or_payee"] == "Coffee Shop"
+
+    try:
+        parse_statement(blank_pdf_bytes(), "scanned.pdf")
+        raise AssertionError("PDFs without extractable text should fail clearly")
+    except StatementParseError as error:
+        assert "no extractable text" in str(error).lower()
+
+    try:
+        parse_statement(b"not a PDF", "invalid.pdf")
+        raise AssertionError("Invalid PDFs should fail clearly")
+    except StatementParseError as error:
+        assert "not a readable statement" in str(error).lower()
 
     rapid_csv = """Date,Time,Amount,Merchant,Type
 01/08/2026,10:00,100,Shop,UPI
@@ -214,7 +263,7 @@ def run_tests():
 
             unsupported = upload(client, b"not a statement", "statement.txt")
             assert unsupported.status_code == 200
-            assert b"Only CSV and XLSX" in unsupported.data
+            assert b"Only PDF, CSV, and XLSX" in unsupported.data
 
             missing = upload(client, b"name,value\nA,1\n", "missing.csv")
             assert missing.status_code == 200
@@ -283,6 +332,13 @@ def run_tests():
             assert b"Not available" in results.data
             assert b"New Electronics" in results.data
             assert b"View Transaction Network" in results.data
+
+            pdf_response = upload(client, pdf_statement_bytes(), "statement.pdf")
+            assert pdf_response.status_code == 302
+            pdf_results = client.get(pdf_response.headers["Location"])
+            assert pdf_results.status_code == 200
+            assert b"Statement Risk Analysis" in pdf_results.data
+            assert b"Coffee Shop" in pdf_results.data
 
             network_url = csv_result_url + "/network"
             network_page = client.get(network_url)
